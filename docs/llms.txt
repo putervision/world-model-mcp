@@ -1,0 +1,35 @@
+# @putervision/world-model-mcp
+
+> Deterministic 3D/2D Spatial World Model for AI Agents
+
+`@putervision/world-model-mcp` provides persistent internal spatial memory for AI coding and gaming agents. It bridges perception and action by maintaining structured 3D entity coordinates, topological relationships, object permanence with confidence decay, movement simulation with collision detection, camera frustum projections, and multi-agent spatial blackboards.
+
+## Core Capabilities
+- **3D Spatial World Representation**: Position $(x, y, z)$, Euler orientation $(\text{pitch}, \text{yaw}, \text{roll})$, and AABB bounding box volume $(w, h, d)$.
+- **Topological Spatial Relationships**: Typed directed edges (`on`, `inside`, `next_to`, `above`, `below`, `near`, `contains`, `occluded_by`, `holding`, `facing`).
+- **Object Permanence & Confidence Decay**: Tracks unobserved entities with exponential decay ($\lambda = 0.05/\text{hr}$) and status transitions (`active` -> `hidden` -> `lost` -> `destroyed`).
+- **Movement Simulation & Collision**: Waypoint ray-marching with AABB obstacle collision detection and navigation paths.
+- **Expected View Frustum**: Line-of-sight cone calculation with ray-box occlusion testing.
+- **Perception Bridging**: Auto-reconciliation of vision detections with Euclidean distance re-identification.
+- **Spatial Spec-Driven Development (Spatial SDD)**: Physical constraint baseline registration and tolerance verification.
+- **Cryptographic Evidence Packs**: SHA-256 hashed proof bundles connecting spatial actions to State Memory task DAGs.
+- **Multi-Agent Spatial Blackboard**: Topic-based ephemeral messaging with TTL expiration, mutex locks, and collision intent detection.
+- **Snapshots & Time-Travel**: Save checkpoints, pairwise diffs, and revert accidental entity mutations from the cryptographic event log.
+- **Playwright & Screen Projection**: 3D-to-2D screen pixel projection, ray unprojection, and timed keyboard/mouse event generation.
+
+## 15 Consolidated MCP Tools
+1. `update_entity`: Create or update 3D entities (coordinates, Euler angles, AABB volume, confidence, tags, properties).
+2. `query_entities`: Search entities by keyword (FTS5), proximity radius, tags, status, or fetch specific entity location & trajectory history.
+3. `set_relation`: Record, update, or remove spatial relationships (`on`, `inside`, `near`, `contains`, `occluded_by`, etc.).
+4. `get_spatial_map`: Export layout (JSON, GeoJSON, glTF, OBJ) or get high-level environment summary (`format: "summary"`).
+5. `simulate_movement`: Predict movement trajectories, test obstacle collisions, or compute navigation waypoints (`mode: "navigate"`).
+6. `ingest_observation`: Ingest vision detections, re-identify entities, and optionally reconcile frustum view (`reconcile: true`).
+7. `get_expected_view`: Calculate visible entities from observer pose and FOV cone with ray-AABB occlusion culling.
+8. `link_to_goal`: Associate entities/regions with state-memory task IDs, or extract goal-relevant spatial context slices (`action: "get_context"`).
+9. `record_outcome`: Record action execution outcomes, movement deltas, or entity destruction.
+10. `manage_spatial_spec`: Spatial SDD physical contract baseline registration, verification, and listing.
+11. `create_evidence_pack`: SHA-256 cryptographic spatial evidence bundles linking proofs to tasks.
+12. `use_spatial_blackboard`: Topic-based multi-agent coordination with TTL and mutex lock claiming/releasing.
+13. `manage_snapshot`: Unified snapshot and time-travel management (save, restore, diff, list, undo, history).
+14. `generate_game_inputs`: Translate 3D navigation paths into Playwright commands or project/unproject screen coordinates.
+15. `wait_for_spatial_state`: Poll until target spatial condition is satisfied (exists, active, confidence threshold, region).

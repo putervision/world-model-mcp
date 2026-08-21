@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Autonomous 3D Game Arena — Playwright &amp; World Model MCP</title>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060913;
+      --card-bg: rgba(14, 21, 38, 0.88);
+      --border: rgba(255, 255, 255, 0.12);
+      --primary: #38bdf8;
+      --accent: #a855f7;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #game-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    .hud-panel {
+      position: absolute;
+      z-index: 10;
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      pointer-events: auto;
+    }
+    .hud-top-left {
+      top: 1rem;
+      left: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .hud-top-right {
+      top: 1rem;
+      right: 1rem;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .hud-bottom {
+      bottom: 1rem;
+      left: 1rem;
+      right: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem 1.25rem;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-success {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--success);
+      border-color: rgba(52, 211, 153, 0.3);
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+    .log-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.5rem;
+      max-height: 140px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .log-entry { margin-bottom: 0.25rem; }
+    .log-entry.key { color: var(--primary); }
+    .log-entry.click { color: var(--success); }
+    .log-entry.item { color: var(--warning); }
+  </style>
+</head>
+<body>
+  <div id="game-canvas"></div>
+
+  <!-- HUD Top Left -->
+  <div class="hud-panel hud-top-left">
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <h2 style="font-size: 1.1rem; font-weight: 700; color: var(--primary);">🎮 Autonomous 3D Game Arena</h2>
+      <span class="badge badge-success">● Bridge Active</span>
+    </div>
+    <div class="mono" style="color: var(--text-muted);">
+      Player Pose: <span id="player-pose" style="color: var(--text);">X: 0.0 | Y: 0.5 | Z: 0.0 | Yaw: 0°</span>
+    </div>
+    <div class="mono" style="color: var(--text-muted);">
+      Camera Pose: <span id="camera-pose" style="color: var(--text);">Pos (0, 12, 18) | FOV 60°</span>
+    </div>
+  </div>
+
+  <!-- HUD Top Right -->
+  <div class="hud-panel hud-top-right">
+    <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text);">🎯 Active Scene Entities</h3>
+    <div id="entity-items" style="display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.8rem;">
+      <div>🏆 <b>Gold Chest</b>: (10.0, 0.5, 8.0) <span id="chest-screen" class="mono" style="color:var(--primary); float:right;">proj: (..., ...)</span></div>
+      <div>💎 <b>Cyan Gem</b>: (-8.0, 0.5, 12.0) <span id="gem-screen" class="mono" style="color:var(--primary); float:right;">proj: (..., ...)</span></div>
+      <div>🧱 <b>Obstacle Wall A</b>: (0.0, 1.5, 6.0) <span class="mono" style="color:var(--danger); float:right;">Solid Obstacle</span></div>
+    </div>
+    <h4 style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-top: 0.4rem;">📡 Playwright Event Stream</h4>
+    <div class="log-box" id="event-log">
+      <div class="log-entry">Arena ready. Awaiting Playwright inputs...</div>
+    </div>
+  </div>
+
+  <!-- HUD Bottom -->
+  <div class="hud-panel hud-bottom">
+    <div style="font-size: 0.8rem; color: var(--text-muted);">
+      🕹️ <b>Controls:</b> <span class="mono" style="color:#fff;">WASD / Arrows</span> to move, <span class="mono" style="color:#fff;">Space</span> to jump, or <span class="mono" style="color:#fff;">Click ground</span> for click-to-move
+    </div>
+    <div class="mono" style="font-size: 0.8rem;">
+      Score: <span id="score-display" style="color: var(--warning); font-weight: bold;">0 / 2 Chests Collected</span>
+    </div>
+  </div>
+
+  <script>
+    // 1. Scene, Camera, Renderer
+    const container = document.getElementById('game-canvas');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x060913);
+    scene.fog = new THREE.FogExp2(0x060913, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 12, 18);
+    camera.lookAt(0, 0, 0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // 2. Lighting & Ground Grid
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+    dirLight.position.set(20, 30, 20);
+    scene.add(dirLight);
+
+    const gridHelper = new THREE.GridHelper(50, 50, 0x38bdf8, 0x1e293b);
+    gridHelper.position.y = 0;
+    scene.add(gridHelper);
+
+    // Invisible ground plane for raycasting
+    const groundGeo = new THREE.PlaneGeometry(100, 100);
+    const groundMat = new THREE.MeshBasicMaterial({ visible: false });
+    const groundPlane = new THREE.Mesh(groundGeo, groundMat);
+    groundPlane.rotation.x = -Math.PI / 2;
+    scene.add(groundPlane);
+
+    // 3. Game State & Entities
+    const player = {
+      mesh: null,
+      position: new THREE.Vector3(0, 0.5, 0),
+      yaw: 0,
+      speed: 6.0,
+      turnSpeed: 120.0,
+      targetDestination: null,
+      score: 0
+    };
+
+    // Create Player Mesh (Sky Blue Drone)
+    const playerGeo = new THREE.BoxGeometry(1.2, 0.8, 1.2);
+    const playerMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.3, metalness: 0.5 });
+    player.mesh = new THREE.Mesh(playerGeo, playerMat);
+    player.mesh.name = "player_drone";
+    player.mesh.userData = { entity_type: "agent" };
+    player.mesh.position.copy(player.position);
+    scene.add(player.mesh);
+
+    // Obstacles
+    const obstacles = [];
+    function createObstacle(name, x, y, z, w, h, d) {
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.8 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = name;
+      mesh.userData = { entity_type: "obstacle", is_solid: true };
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+
+      const wireGeo = new THREE.EdgesGeometry(geo);
+      const wireMat = new THREE.LineBasicMaterial({ color: 0xf87171, linewidth: 1.5 });
+      mesh.add(new THREE.LineSegments(wireGeo, wireMat));
+
+      obstacles.push(mesh);
+      return mesh;
+    }
+
+    createObstacle("obstacle_wall_a", 0, 1.5, 6, 8, 3, 1);
+    createObstacle("obstacle_wall_b", -6, 1.5, -4, 1, 3, 8);
+    createObstacle("obstacle_wall_c", 6, 1.5, -4, 1, 3, 8);
+
+    // Collectibles (Items)
+    const collectibles = [];
+    function createCollectible(name, x, y, z, color) {
+      const geo = new THREE.BoxGeometry(1, 1, 1);
+      const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.2, metalness: 0.8, emissive: color, emissiveIntensity: 0.3 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = name;
+      mesh.userData = { entity_type: "item", collected: false };
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+
+      const wireGeo = new THREE.EdgesGeometry(geo);
+      const wireMat = new THREE.LineBasicMaterial({ color: 0xffffff });
+      mesh.add(new THREE.LineSegments(wireGeo, wireMat));
+
+      collectibles.push(mesh);
+      return mesh;
+    }
+
+    const chestGold = createCollectible("gold_chest", 10, 0.5, 8, 0xfbbf24);
+    const gemCyan = createCollectible("cyan_gem", -8, 0.5, 12, 0x06b6d4);
+
+    // 4. Keyboard Input State
+    const keysDown = {};
+    window.addEventListener('keydown', (e) => {
+      keysDown[e.code] = true;
+      logEvent('key', `KeyDown: ${e.code}`);
+    });
+    window.addEventListener('keyup', (e) => {
+      keysDown[e.code] = false;
+      logEvent('key', `KeyUp: ${e.code}`);
+    });
+
+    // 5. Mouse Click-To-Move
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('click', (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const intersects = raycaster.intersectObject(groundPlane);
+      if (intersects.length > 0) {
+        const pt = intersects[0].point;
+        player.targetDestination = new THREE.Vector3(pt.x, 0.5, pt.z);
+        logEvent('click', `Target destination set: (${pt.x.toFixed(1)}, ${pt.z.toFixed(1)})`);
+      }
+    });
+
+    // Log Event Helper
+    const logBox = document.getElementById('event-log');
+    function logEvent(type, text) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    // 6. Built-in Playwright Bridge Hook
+    window.scene = scene;
+    window.camera = camera;
+    window.__WORLD_MODEL_BRIDGE = {
+      version: '0.1.0',
+      extractScene: function() {
+        const detections = [];
+        scene.traverse((obj) => {
+          if (!obj.isMesh || obj === groundPlane) return;
+          const pos = new THREE.Vector3();
+          obj.getWorldPosition(pos);
+          detections.push({
+            label: obj.name,
+            class_name: obj.userData?.entity_type || 'object',
+            estimated_position: { x: Math.round(pos.x * 10) / 10, y: Math.round(pos.y * 10) / 10, z: Math.round(pos.z * 10) / 10 },
+            confidence: 1.0,
+            attributes: obj.userData || {}
+          });
+        });
+        return {
+          observer_pose: {
+            position: { x: Math.round(camera.position.x * 10) / 10, y: Math.round(camera.position.y * 10) / 10, z: Math.round(camera.position.z * 10) / 10 },
+            orientation: { pitch: -30, yaw: 0, roll: 0 }
+          },
+          detections: detections
+        };
+      },
+      simulateKeyHold: async function(code, durationMs) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { code: code, bubbles: true }));
+        await new Promise(r => setTimeout(r, durationMs || 100));
+        document.dispatchEvent(new KeyboardEvent('keyup', { code: code, bubbles: true }));
+      }
+    };
+
+    // 7. Project coordinates to 2D Screen for HUD
+    function toScreenPosition(obj, camera) {
+      const vector = new THREE.Vector3();
+      obj.getWorldPosition(vector);
+      vector.project(camera);
+      return {
+        x: Math.round((vector.x * .5 + .5) * window.innerWidth),
+        y: Math.round(-(vector.y * .5 - .5) * window.innerHeight)
+      };
+    }
+
+    // 8. Main Game Loop
+    let lastTime = performance.now();
+    function animate() {
+      requestAnimationFrame(animate);
+      const now = performance.now();
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      // WASD / Arrow Movement
+      let moveZ = 0;
+      let moveX = 0;
+      if (keysDown['KeyW'] || keysDown['ArrowUp']) moveZ -= 1;
+      if (keysDown['KeyS'] || keysDown['ArrowDown']) moveZ += 1;
+      if (keysDown['KeyA'] || keysDown['ArrowLeft']) moveX -= 1;
+      if (keysDown['KeyD'] || keysDown['ArrowRight']) moveX += 1;
+
+      if (moveZ !== 0 || moveX !== 0) {
+        player.targetDestination = null; // override click-to-move
+        player.position.z += moveZ * player.speed * dt;
+        player.position.x += moveX * player.speed * dt;
+        if (moveX !== 0 || moveZ !== 0) {
+          player.yaw = Math.atan2(moveX, -moveZ) * (180 / Math.PI);
+        }
+      } else if (player.targetDestination) {
+        // Click-to-move interpolation
+        const toTarget = new THREE.Vector3().subVectors(player.targetDestination, player.position);
+        toTarget.y = 0;
+        const dist = toTarget.length();
+        if (dist > 0.1) {
+          toTarget.normalize();
+          player.position.addScaledVector(toTarget, player.speed * dt);
+          player.yaw = Math.atan2(toTarget.x, toTarget.z) * (180 / Math.PI);
+        } else {
+          player.targetDestination = null;
+        }
+      }
+
+      // Check Collectible Collisions
+      collectibles.forEach((item) => {
+        if (!item.userData.collected && player.position.distanceTo(item.position) < 1.5) {
+          item.userData.collected = true;
+          scene.remove(item);
+          player.score += 1;
+          document.getElementById('score-display').textContent = `${player.score} / 2 Chests Collected`;
+          logEvent('item', `🏆 Collected ${item.name}!`);
+        }
+      });
+
+      // Update Player Mesh
+      player.mesh.position.copy(player.position);
+      player.mesh.rotation.y = (player.yaw * Math.PI) / 180;
+
+      // Update HUD
+      document.getElementById('player-pose').textContent = `X: ${player.position.x.toFixed(1)} | Y: ${player.position.y.toFixed(1)} | Z: ${player.position.z.toFixed(1)} | Yaw: ${Math.round(player.yaw)}°`;
+      
+      const chestPos = toScreenPosition(chestGold, camera);
+      document.getElementById('chest-screen').textContent = `screen: (${chestPos.x}, ${chestPos.y})`;
+
+      const gemPos = toScreenPosition(gemCyan, camera);
+      document.getElementById('gem-screen').textContent = `screen: (${gemPos.x}, ${gemPos.y})`;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>

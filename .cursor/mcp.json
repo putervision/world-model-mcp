@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "state-memory-mcp": {
+      "command": "state-memory-mcp",
+      "args": [
+        "run"
+      ],
+      "env": {
+        "STATE_MEMORY_MCP_PROJECT": "world-model-mcp"
+      }
+    },
+    "vision-memory-mcp": {
+      "command": "vision-memory-mcp",
+      "args": [
+        "run"
+      ],
+      "env": {
+        "LANCEDB_PATH": "./.vision-memory-mcp"
+      }
+    },
+    "world-model-mcp": {
+      "command": "world-model-mcp",
+      "args": [
+        "run"
+      ],
+      "env": {
+        "WORLD_MODEL_MCP_PROJECT": "world-model-mcp"
+      }
+    }
+  }
+}

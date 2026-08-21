@@ -1,0 +1,24 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.putervision/world-model-mcp",
+  "version": "0.1.0",
+  "title": "World Model MCP",
+  "description": "Deterministic, persistent 3D/2D spatial world model for AI agents with entity tracking, object permanence, movement simulation, and expected view frustum projection.",
+  "publisher": "PuterVision",
+  "websiteUrl": "https://putervision.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/putervision/world-model-mcp"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@putervision/world-model-mcp",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "executable": "world-model-mcp"
+    }
+  ]
+}

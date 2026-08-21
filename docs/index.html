@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@putervision/world-model-mcp — Persistent 3D/2D Spatial World Model for AI Agents</title>
+  <meta name="description" content="Persistent internal spatial world model for AI agents. Maintains structured representations of entities, spatial relationships, object permanence, movement simulation, and expected view frustum projection.">
+  <meta name="keywords" content="world-model, spatial-memory, mcp, model-context-protocol, ai-agents, object-permanence, 3d-spatial, simulation, cursor, claude-code, putervision">
+  <meta name="author" content="PuterVision">
+  <meta name="theme-color" content="#0b0f19">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="@putervision/world-model-mcp — Spatial World Model MCP Server">
+  <meta property="og:description" content="Durable 3D/2D entity tracking, spatial relations, object permanence, and movement simulation for AI agents.">
+  <meta property="og:url" content="https://github.com/putervision/world-model-mcp">
+
+  <!-- Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* Custom Radar & Playground Styles */
+    .radar-container {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      margin-top: 1.5rem;
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .radar-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-wrap {
+      position: relative;
+      background: radial-gradient(circle at center, rgba(6, 182, 212, 0.08) 0%, rgba(11, 15, 25, 0.95) 70%);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 380px;
+    }
+
+    canvas#radarCanvas {
+      width: 100%;
+      height: 380px;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .radar-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .control-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .control-row label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-row input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent-cyan);
+    }
+
+    .visible-list {
+      max-height: 170px;
+      overflow-y: auto;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 0.5rem;
+      font-family: "Fira Code", monospace;
+      font-size: 0.8rem;
+    }
+
+    .visible-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.35rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .visible-item.seen {
+      color: #34d399;
+    }
+
+    .triad-box {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    @media (max-width: 800px) {
+      .triad-box {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .triad-card {
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .triad-card.active-hub {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.2);
+    }
+
+    .triad-card h4 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tool-table-wrap {
+      overflow-x: auto;
+      margin-top: 1.5rem;
+    }
+
+    table.tool-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.tool-table th, table.tool-table td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    table.tool-table th {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--accent-cyan);
+      font-weight: 700;
+    }
+
+    table.tool-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge-ro {
+      background: rgba(52, 211, 153, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .badge-mut {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .tab-container {
+      margin-top: 1.5rem;
+    }
+
+    .tab-header {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1rem;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      padding: 0.6rem 1.2rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      color: var(--accent-cyan);
+      border-bottom-color: var(--accent-cyan);
+    }
+
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    pre code {
+      font-family: "Fira Code", monospace;
+      font-size: 0.85rem;
+    }
+
+    .code-box {
+      background: rgba(11, 15, 25, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      position: relative;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      border-radius: 4px;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      background: var(--accent-cyan);
+      color: #0b0f19;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-backdrop"></div>
+
+  <header>
+    <div class="logo">
+      <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" class="brand-link">
+        <img src="putervision-icon.png" alt="PuterVision Icon" class="nav-brand-img"> PuterVision
+      </a>
+      <span class="logo-sep">/</span>
+      <a href="https://github.com/putervision/world-model-mcp" class="logo-link">
+        <span style="font-size: 1.4rem;">🌐</span>
+        <span class="logo-text">World Model MCP</span>
+      </a>
+    </div>
+    <nav aria-label="Main Navigation">
+      <ul class="nav-links">
+        <li><a href="#radar">Spatial Radar</a></li>
+        <li><a href="#triad">PuterVision Triad</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#tools">21 MCP Tools</a></li>
+        <li><a href="#quickstart">Quickstart</a></li>
+      </ul>
+    </nav>
+    <a href="https://github.com/putervision/world-model-mcp" class="btn-github" target="_blank" rel="noopener noreferrer" aria-label="Star on GitHub">
+      <svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" role="img" style="color: #fbbf24">
+        <path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"></path>
+      </svg>
+      Star on GitHub
+    </a>
+  </header>
+
+  <main class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+      <span class="badge">RELEASE v0.1.0 • LOCAL-FIRST SQLITE WAL • 21 CONSOLIDATED MCP TOOLS</span>
+      <h1>Deterministic 3D/2D Spatial World Model for AI Agents</h1>
+      <p>Bridges perception and action with persistent entity tracking, topological spatial relationships, object permanence with confidence decay, movement simulation, spatial SDD, and Playwright 3D game navigation.</p>
+
+      <div class="cta-group">
+        <a href="#radar" class="btn-primary">Explore Live Spatial Radar</a>
+        <a href="#quickstart" class="btn-secondary">Setup Quickstart</a>
+        <a href="#tools" class="btn-secondary">View 21 Tools</a>
+      </div>
+    </section>
+
+
+
+    <!-- PuterVision Triad Section -->
+    <section id="triad" class="card">
+      <h2>The PuterVision Autonomous Agent Memory Triad</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+        <code>world-model-mcp</code> operates as the durable spatial foundation linking raw sensory perception with structured workflow execution.
+      </p>
+
+      <div class="triad-box">
+        <div class="triad-card">
+          <h4><span>👁️</span> Perception Layer</h4>
+          <strong style="color: var(--accent-cyan);">vision-memory-mcp</strong>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Visual state cache, layout grounding, AX tree coordinate mappings, diff detection, and video timeline keyframes.
+          </p>
+        </div>
+
+        <div class="triad-card active-hub">
+          <h4><span>🌐</span> Spatial World Model</h4>
+          <strong style="color: #34d399;">world-model-mcp (This Server)</strong>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Persistent 3D/2D coordinate store, topological graphs (on, inside, near), object permanence, movement collision simulation, and FOV expected view cones.
+          </p>
+        </div>
+
+        <div class="triad-card">
+          <h4><span>🧠</span> Reasoning & Workflow</h4>
+          <strong style="color: var(--accent-purple);">state-memory-mcp</strong>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Task execution DAGs, decisions, blockers, SDD design contracts, milestone verification, and multimodal trajectory audit trail.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Features Grid -->
+    <section id="features" class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3>Durable Entity Tracking</h3>
+        <p>Stores 3D positions, Euler orientations, AABB bounding volumes, properties, and tags in a local SQLite WAL engine.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔗</div>
+        <h3>Topological Spatial Relations</h3>
+        <p>Maintains bidirectional spatial relationships (<code>contains</code> ↔ <code>inside</code>, <code>above</code> ↔ <code>below</code>, <code>connected_to</code>) with BFS path traversal.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⏳</div>
+        <h3>Object Permanence & Decay</h3>
+        <p>Entities stay in memory even when out of view, with configurable time-based confidence decay and status lifecycles (<code>active</code> → <code>hidden</code> → <code>lost</code>).</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🚀</div>
+        <h3>Collision & Movement Simulation</h3>
+        <p>Predicts entity displacement trajectories and tests for AABB obstacle collisions before executing real-world agent actions.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📐</div>
+        <h3>Frustum & Expected Views</h3>
+        <p>Calculates visible entities from camera/observer pose and horizontal FOV cones, diffing observations to detect appeared or displaced items.</p>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Goal Alignment Bridge</h3>
+        <p>Directly links target entities and destination regions to active <code>state-memory-mcp</code> tasks, extracting goal-relevant spatial slices.</p>
+      </div>
+    </section>
+
+    <!-- Interactive Spatial Radar Workbench -->
+    <section id="radar" class="card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2>Interactive Spatial Radar & Frustum Visualizer</h2>
+          <p style="color: var(--text-secondary);">
+            Test real-time frustum projection (<code>get_expected_view</code>) and spatial proximity queries (<code>query_entities</code>). Drag the observer or rotate the heading cone!
+          </p>
+        </div>
+        <button id="resetRadarBtn" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Reset Scene</button>
+      </div>
+
+      <div class="radar-container">
+        <div class="canvas-wrap">
+          <canvas id="radarCanvas" width="600" height="380"></canvas>
+        </div>
+
+        <div class="radar-controls">
+          <div class="control-row">
+            <label>Observer Heading (Yaw): <span id="yawVal" style="color: var(--accent-cyan);">0°</span></label>
+            <input type="range" id="yawSlider" min="0" max="360" value="0">
+          </div>
+
+          <div class="control-row">
+            <label>Field of View (FOV): <span id="fovVal" style="color: var(--accent-cyan);">90°</span></label>
+            <input type="range" id="fovSlider" min="30" max="150" value="90">
+          </div>
+
+          <div class="control-row">
+            <label>Max View Distance: <span id="distVal" style="color: var(--accent-cyan);">40m</span></label>
+            <input type="range" id="distSlider" min="10" max="60" value="40">
+          </div>
+
+          <div class="control-row">
+            <label>Visible Entities in Frustum (<span id="visibleCount">0</span>):</label>
+            <div class="visible-list" id="visibleList">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19 MCP Tools Reference Table -->
+    <section id="tools" class="card">
+      <h2>19 Consolidated MCP Tools</h2>
+      <p style="color: var(--text-secondary);">
+        Complete tool reference categorized into Spatial Memory, Vision Integration, Goal Integration, Spatial SDD & Proofs, and Multi-Agent & Replay.
+      </p>
+
+      <div class="tool-table-wrap">
+        <table class="tool-table">
+          <thead>
+            <tr>
+              <th>Tool Name</th>
+              <th>Category</th>
+              <th>Type</th>
+              <th>Key Parameters</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>update_entity</code></td>
+              <td>Spatial Memory</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>name, type, position, bbox, properties</code></td>
+              <td>Create or update an entity (position, orientation, bounding box, properties, confidence)</td>
+            </tr>
+            <tr>
+              <td><code>query_entities</code></td>
+              <td>Spatial Memory</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>query, type, near_position, max_distance</code></td>
+              <td>Search entities by keyword (FTS5), type, region, spatial proximity, tags, or status</td>
+            </tr>
+            <tr>
+              <td><code>get_location</code></td>
+              <td>Spatial Memory</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>entity_id, include_history</code></td>
+              <td>Get current, last-known, or historical positions and trajectory history of an entity</td>
+            </tr>
+            <tr>
+              <td><code>set_relation</code></td>
+              <td>Spatial Memory</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>source_id, relation, target_id, offset</code></td>
+              <td>Record spatial relationships (on, inside, next_to, above, below, near, contains)</td>
+            </tr>
+            <tr>
+              <td><code>get_spatial_map</code></td>
+              <td>Spatial Memory</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>region_id, format, min_confidence</code></td>
+              <td>Export structured spatial layout (JSON, GeoJSON, glTF 2.0, OBJ)</td>
+            </tr>
+            <tr>
+              <td><code>simulate_movement</code></td>
+              <td>Spatial Memory</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>entity_id, delta_position, check_collisions</code></td>
+              <td>Predict trajectory and test for AABB obstacle collisions</td>
+            </tr>
+            <tr>
+              <td><code>get_navigation_hints</code></td>
+              <td>Spatial Memory</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>start_entity_id, target_entity_id</code></td>
+              <td>Compute topological or waypoint navigation paths between entities/locations</td>
+            </tr>
+            <tr>
+              <td><code>ingest_observation</code></td>
+              <td>Vision Integration</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>observer_pose, detections, visual_state_id</code></td>
+              <td>Ingest structured perception detections into world model; re-identify entities</td>
+            </tr>
+            <tr>
+              <td><code>reconcile_observation</code></td>
+              <td>Vision Integration</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>observer_pose, detections</code></td>
+              <td>Compare incoming vision data against expected frustum view (diff & anomalies)</td>
+            </tr>
+            <tr>
+              <td><code>get_expected_view</code></td>
+              <td>Vision Integration</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>observer_position, observer_orientation, fov</code></td>
+              <td>Calculate visible entities from observer pose with 3D ray-AABB occlusion culling</td>
+            </tr>
+            <tr>
+              <td><code>get_relevant_context</code></td>
+              <td>Goal Integration</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>task_id, current_agent_position, radius</code></td>
+              <td>Extract spatial slice relevant to active goal/task</td>
+            </tr>
+            <tr>
+              <td><code>link_to_goal</code></td>
+              <td>Goal Integration</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>task_id, entity_id, relationship</code></td>
+              <td>Associate entities/regions with state-memory task IDs</td>
+            </tr>
+            <tr>
+              <td><code>record_outcome</code></td>
+              <td>Goal Integration</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>action_name, success, resulting_position</code></td>
+              <td>Update world model after action execution completes</td>
+            </tr>
+            <tr>
+              <td><code>get_world_summary</code></td>
+              <td>Utility</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>project</code></td>
+              <td>High-level environment overview, entity breakdown, and bounds</td>
+            </tr>
+            <tr>
+              <td><code>manage_spatial_spec</code></td>
+              <td>Spatial SDD</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>action, name, constraints, bounds</code></td>
+              <td>Register and verify physical design constraints (clearance, bounds, containment)</td>
+            </tr>
+            <tr>
+              <td><code>create_evidence_pack</code></td>
+              <td>Proofs</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>task_id, entity_ids, observation_ids</code></td>
+              <td>Generate SHA-256 cryptographic spatial evidence bundles for state-memory artifacts</td>
+            </tr>
+            <tr>
+              <td><code>use_spatial_blackboard</code></td>
+              <td>Multi-Agent</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>action, topic, sender, payload, ttl</code></td>
+              <td>Topic-based multi-agent coordination with TTL and collision intent alerts</td>
+            </tr>
+            <tr>
+              <td><code>undo_mutation</code></td>
+              <td>Replay</td>
+              <td><span class="badge-mut">Mutating</span></td>
+              <td><code>entity_id, type</code></td>
+              <td>Revert latest entity mutation from cryptographic event ledger</td>
+            </tr>
+            <tr>
+              <td><code>wait_for_spatial_state</code></td>
+              <td>Utility</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>entity_id, condition, timeout_ms</code></td>
+              <td>Poll until target spatial condition is satisfied</td>
+            </tr>
+            <tr>
+              <td><code>project_to_screen</code></td>
+              <td>Playwright &amp; Games</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>entity_id, camera, viewport, direction</code></td>
+              <td>Translate 3D coordinates to 2D viewport screen pixels or unproject screen clicks into 3D world rays</td>
+            </tr>
+            <tr>
+              <td><code>generate_game_inputs</code></td>
+              <td>Playwright &amp; Games</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>entity_id, target_entity_id, control_profile</code></td>
+              <td>Translate 3D waypoints into timed WASD/Arrow key hold sequences and Playwright commands</td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+    </section>
+
+    <!-- Quickstart & Client Configuration -->
+    <section id="quickstart" class="card">
+      <h2>Installation & Client Configuration</h2>
+      <p style="color: var(--text-secondary);">
+        Configure <code>world-model-mcp</code> into your IDE or autonomous coding agent framework.
+      </p>
+
+      <div class="tab-container">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="switchTab(event, 'tab-npx')">npx / CLI</button>
+          <button class="tab-btn" onclick="switchTab(event, 'tab-cursor')">Cursor</button>
+          <button class="tab-btn" onclick="switchTab(event, 'tab-vscode')">VS Code</button>
+          <button class="tab-btn" onclick="switchTab(event, 'tab-antigravity')">Antigravity</button>
+          <button class="tab-btn" onclick="switchTab(event, 'tab-sdk')">Node.js SDK</button>
+        </div>
+
+        <div id="tab-npx" class="tab-content active">
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code># Scaffold world-model-mcp and generate IDE agent rules in current workspace
+npx @putervision/world-model-mcp init
+
+# Launch standalone Three.js 3D WebGL scene visualizer (port 8090)
+npx @putervision/world-model-mcp view
+
+# Check health, graph invariants, and event audit chain
+npx @putervision/world-model-mcp doctor
+
+# Inspect active entities in an ASCII table
+npx @putervision/world-model-mcp inspect
+
+# Verify Spatial SDD physical constraints
+npx @putervision/world-model-mcp spec list
+
+# Post and read multi-agent spatial blackboard
+npx @putervision/world-model-mcp blackboard list
+
+# Export scene to standard 3D formats (glTF 2.0, OBJ, GeoJSON)
+npx @putervision/world-model-mcp export -o scene.gltf gltf</code></pre>
+          </div>
+        </div>
+
+
+        <div id="tab-cursor" class="tab-content">
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>// .cursor/mcp.json
+{
+  "mcpServers": {
+    "world-model-mcp": {
+      "command": "world-model-mcp",
+      "args": ["run"],
+      "env": {
+        "WORLD_MODEL_MCP_PROJECT": "my-project"
+      }
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div id="tab-vscode" class="tab-content">
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>// .vscode/mcp.json
+{
+  "servers": {
+    "world-model-mcp": {
+      "type": "stdio",
+      "command": "world-model-mcp",
+      "args": ["run"],
+      "env": {
+        "WORLD_MODEL_MCP_PROJECT": "my-project"
+      }
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div id="tab-antigravity" class="tab-content">
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>// ~/.gemini/config/mcp_config.json
+{
+  "mcpServers": {
+    "world-model-mcp": {
+      "command": "world-model-mcp",
+      "args": ["run"]
+    }
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <div id="tab-sdk" class="tab-content">
+          <div class="code-box">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre><code>import { getDb, EntityStore, SpatialGraph, FrustumEngine } from "@putervision/world-model-mcp/lib";
+
+const db = getDb("my-sim");
+
+// Create 3D entity
+const chest = EntityStore.addEntity(db, {
+  project: "my-sim",
+  name: "Treasure Chest",
+  type: "container",
+  position: { x: 12, y: 0, z: 8 },
+  properties: { is_locked: true },
+});
+
+// Check visibility from observer
+const expected = FrustumEngine.getExpectedView(db, {
+  project: "my-sim",
+  observer_position: { x: 0, y: 0, z: 0 },
+  observer_orientation: { yaw: 35 },
+  fov_degrees: 90,
+});
+
+console.log("Visible Entities:", expected.visible_entities);</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer style="border-top: 1px solid var(--glass-border); padding: 2rem; margin-top: 4rem; text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
+    <p>
+      <strong>@putervision/world-model-mcp</strong> — An open-source component of the <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: none;">PuterVision</a> AI Agent Architecture.
+    </p>
+    <p style="margin-top: 0.5rem;">
+      Released under the <a href="https://opensource.org/licenses/MIT" style="color: var(--text-secondary);">MIT License</a>.
+    </p>
+  </footer>
+
+  <script>
+    // Tab Switching Function
+    function switchTab(evt, tabId) {
+      const container = evt.currentTarget.closest(".tab-container") || document;
+      container.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      container.querySelectorAll(".tab-content").forEach(content => content.classList.remove("active"));
+      evt.currentTarget.classList.add("active");
+      const target = document.getElementById(tabId);
+      if (target) target.classList.add("active");
+    }
+
+    // Code Copy Function
+    function copyCode(btn) {
+      const code = btn.nextElementSibling.innerText;
+      navigator.clipboard.writeText(code).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = "Copied!";
+        btn.style.color = "#34d399";
+        setTimeout(() => {
+          btn.innerText = orig;
+          btn.style.color = "";
+        }, 1500);
+      });
+    }
+
+    // Interactive Spatial Radar Simulator
+    function initRadar() {
+      const canvas = document.getElementById("radarCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      // Handle high-DPI displays
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width || 600;
+        canvas.height = rect.height || 380;
+      }
+      resizeCanvas();
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        drawRadar();
+      });
+
+      let observer = { x: 0, z: 0, yaw: 0, fov: 90, maxDist: 40 };
+
+      const sampleEntities = [
+        { name: "Origin Pillar", type: "landmark", x: 0, z: 15, color: "#60a5fa" },
+        { name: "Gold Chest", type: "container", x: 12, z: 22, color: "#fbbf24" },
+        { name: "Brick Wall", type: "obstacle", x: -8, z: 12, color: "#f87171" },
+        { name: "NPC Scout", type: "npc", x: -15, z: 28, color: "#a78bfa" },
+        { name: "Health Potion", type: "item", x: 5, z: -10, color: "#34d399" },
+        { name: "Rear Beacon", type: "landmark", x: 0, z: -25, color: "#38bdf8" },
+      ];
+
+      const yawSlider = document.getElementById("yawSlider");
+      const fovSlider = document.getElementById("fovSlider");
+      const distSlider = document.getElementById("distSlider");
+
+      const yawVal = document.getElementById("yawVal");
+      const fovVal = document.getElementById("fovVal");
+      const distVal = document.getElementById("distVal");
+      const visibleList = document.getElementById("visibleList");
+      const visibleCount = document.getElementById("visibleCount");
+
+      function updateControls() {
+        if (yawSlider) observer.yaw = parseFloat(yawSlider.value);
+        if (fovSlider) observer.fov = parseFloat(fovSlider.value);
+        if (distSlider) observer.maxDist = parseFloat(distSlider.value);
+
+        if (yawVal) yawVal.innerText = observer.yaw + "°";
+        if (fovVal) fovVal.innerText = observer.fov + "°";
+        if (distVal) distVal.innerText = observer.maxDist + "m";
+
+        drawRadar();
+      }
+
+      if (yawSlider) yawSlider.addEventListener("input", updateControls);
+      if (fovSlider) fovSlider.addEventListener("input", updateControls);
+      if (distSlider) distSlider.addEventListener("input", updateControls);
+
+      const resetBtn = document.getElementById("resetRadarBtn");
+      if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+          observer = { x: 0, z: 0, yaw: 0, fov: 90, maxDist: 40 };
+          if (yawSlider) yawSlider.value = "0";
+          if (fovSlider) fovSlider.value = "90";
+          if (distSlider) distSlider.value = "40";
+          updateControls();
+        });
+      }
+
+      // Mouse drag to reposition observer
+      let isDragging = false;
+      canvas.addEventListener("mousedown", (e) => {
+        isDragging = true;
+        setObserverFromMouse(e);
+      });
+      canvas.addEventListener("mousemove", (e) => {
+        if (isDragging) setObserverFromMouse(e);
+      });
+      window.addEventListener("mouseup", () => { isDragging = false; });
+
+      function setObserverFromMouse(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const scale = 5;
+
+        observer.x = (mouseX - centerX) / scale;
+        observer.z = (centerY - mouseY) / scale;
+        drawRadar();
+      }
+
+      function drawRadar() {
+        const w = canvas.width;
+        const h = canvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const scale = 5;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw Grid Circles
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.12)";
+        ctx.lineWidth = 1;
+        for (let r = 10; r <= 60; r += 10) {
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * scale, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Draw Axes
+        ctx.beginPath();
+        ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+        ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+        ctx.stroke();
+
+        // Observer Pixel Position
+        const obsPx = cx + observer.x * scale;
+        const obsPy = cy - observer.z * scale;
+
+        // Draw Frustum Cone
+        const yawRad = (observer.yaw * Math.PI) / 180;
+        const halfFovRad = ((observer.fov / 2) * Math.PI) / 180;
+        const maxDistPx = observer.maxDist * scale;
+
+        const leftAngle = -Math.PI / 2 + yawRad - halfFovRad;
+        const rightAngle = -Math.PI / 2 + yawRad + halfFovRad;
+
+        ctx.fillStyle = "rgba(6, 182, 212, 0.15)";
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.7)";
+        ctx.beginPath();
+        ctx.moveTo(obsPx, obsPy);
+        ctx.arc(obsPx, obsPy, maxDistPx, leftAngle, rightAngle);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw Heading Ray
+        ctx.strokeStyle = "rgba(6, 182, 212, 0.95)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(obsPx, obsPy);
+        ctx.lineTo(
+          obsPx + Math.cos(-Math.PI / 2 + yawRad) * (maxDistPx * 0.75),
+          obsPy + Math.sin(-Math.PI / 2 + yawRad) * (maxDistPx * 0.75)
+        );
+        ctx.stroke();
+        ctx.lineWidth = 1;
+
+        // Draw Observer Center Point
+        ctx.fillStyle = "#06b6d4";
+        ctx.beginPath();
+        ctx.arc(obsPx, obsPy, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+
+        // Evaluate and Draw Entities
+        const visibleEntities = [];
+
+        sampleEntities.forEach(ent => {
+          const entPx = cx + ent.x * scale;
+          const entPy = cy - ent.z * scale;
+
+          // Frustum test
+          const dx = ent.x - observer.x;
+          const dz = ent.z - observer.z;
+          const dist = Math.sqrt(dx * dx + dz * dz);
+
+          let isVisible = false;
+          let angleOffset = 0;
+
+          if (dist <= observer.maxDist) {
+            let targetAngleRad = Math.atan2(dx, dz);
+            let targetAngleDeg = (targetAngleRad * 180) / Math.PI;
+            if (targetAngleDeg < 0) targetAngleDeg += 360;
+
+            let diff = Math.abs(targetAngleDeg - observer.yaw);
+            if (diff > 180) diff = 360 - diff;
+            angleOffset = diff;
+
+            if (diff <= observer.fov / 2) {
+              isVisible = true;
+            }
+          }
+
+          if (isVisible) {
+            visibleEntities.push({ ...ent, dist, angleOffset });
+          }
+
+          // Entity Dot
+          ctx.fillStyle = isVisible ? ent.color : "rgba(156, 163, 175, 0.35)";
+          ctx.beginPath();
+          ctx.arc(entPx, entPy, isVisible ? 7 : 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          if (isVisible) {
+            ctx.strokeStyle = "#ffffff";
+            ctx.stroke();
+          }
+
+          // Entity Label
+          ctx.fillStyle = isVisible ? "#ffffff" : "rgba(156, 163, 175, 0.45)";
+          ctx.font = "11px sans-serif";
+          ctx.fillText(ent.name, entPx + 9, entPy + 3);
+        });
+
+        // Update Visible List UI
+        if (visibleCount) visibleCount.innerText = String(visibleEntities.length);
+        if (visibleList) {
+          visibleList.innerHTML = "";
+
+          if (visibleEntities.length === 0) {
+            visibleList.innerHTML = "<div style=\"color: #9ca3af; padding: 0.5rem;\">No entities inside field of view cone.</div>";
+          } else {
+            visibleEntities.sort((a, b) => a.dist - b.dist);
+            visibleEntities.forEach(v => {
+              const div = document.createElement("div");
+              div.className = "visible-item seen";
+              div.innerHTML = "<span>" + v.name + " (" + v.type + ")</span><span>" + v.dist.toFixed(1) + "m | " + v.angleOffset.toFixed(0) + "°</span>";
+              visibleList.appendChild(div);
+            });
+          }
+        }
+      }
+
+      // Initial Draw
+      updateControls();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initRadar);
+    } else {
+      initRadar();
+    }
+  </script>
+</body>
+</html>

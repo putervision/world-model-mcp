@@ -1,0 +1,45 @@
+{
+  "$schema": "https://glama.ai/mcp/schemas/server.json",
+  "name": "world-model-mcp",
+  "title": "World Model MCP",
+  "description": "Persistent 3D/2D spatial world model for AI coding and gaming agents to track entities, spatial relations, object permanence, and movement simulation.",
+  "maintainers": [
+    "putervision"
+  ],
+  "author": "PuterVision",
+  "license": "MIT",
+  "homepage": "https://putervision.com",
+  "repository": "https://github.com/putervision/world-model-mcp",
+  "categories": [
+    "developer-tools",
+    "ai-agents",
+    "spatial-memory",
+    "world-model"
+  ],
+  "tags": [
+    "mcp",
+    "model-context-protocol",
+    "world-model",
+    "spatial-memory",
+    "object-permanence",
+    "sqlite",
+    "ai-agents",
+    "cursor",
+    "claude-code",
+    "windsurf"
+  ],
+  "keywords": [
+    "world-model",
+    "spatial-memory",
+    "3d-spatial",
+    "entity-tracking",
+    "frustum",
+    "navigation",
+    "perception",
+    "simulation",
+    "putervision",
+    "mcp",
+    "ai-agents",
+    "evidence-pack"
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "name": "@putervision/world-model-mcp",
+  "version": "0.2.0",
+  "description": "Deterministic, persistent 3D/2D spatial world model for AI agents. Bridges perception (vision-memory-mcp) and action/reasoning (state-memory-mcp) with entity tracking, spatial relations, object permanence, movement simulation, and expected view frustum projection.",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "model-context-protocol-server",
+    "world-model",
+    "spatial-memory",
+    "object-permanence",
+    "spatial-relations",
+    "entity-tracking",
+    "3d-spatial",
+    "simulation",
+    "navigation",
+    "ai-agents",
+    "ai-assistant",
+    "cursor",
+    "cursor-rules",
+    "claude-code",
+    "windsurf",
+    "sqlite",
+    "developer-tools"
+  ],
+  "homepage": "https://github.com/putervision/world-model-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/putervision/world-model-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/putervision/world-model-mcp.git"
+  },
+  "mcpName": "io.github.putervision/world-model-mcp",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "PuterVision",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./lib": {
+      "types": "./dist/lib.d.ts",
+      "import": "./dist/lib.js"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "import": "./dist/cli.js"
+    }
+  },
+  "bin": {
+    "world-model-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "server.json",
+    "manifest.json",
+    "glama.json",
+    "PROJECT_INSTRUCTIONS_TEMPLATE.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "ci": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build",
+    "cli": "node dist/cli.js",
+    "dev": "tsup --watch --onSuccess \"node dist/index.js\"",
+    "format": "prettier --write src/**/*.ts tests/**/*.ts",
+    "format:check": "prettier --check src/**/*.ts tests/**/*.ts",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "npm run build",
+    "release": "npm publish",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:all": "node scripts/test-all.js",
+    "test:3d": "vitest run tests/integration/game-e2e-loop.test.ts tests/engine/geometry-frustum-stress.test.ts tests/integration/multi-agent-game.test.ts tests/utils/projection.test.ts tests/engine/game-controls.test.ts tests/browser/threejs-bridge.test.ts tests/engine/frustum-occlusion.test.ts tests/engine/export-3d.test.ts tests/utils/math.test.ts",
+    "test:concurrency": "vitest run tests/integration/concurrency-stress.test.ts",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "vitest run tests/integration/game-e2e-loop.test.ts",
+    "test:integration": "vitest run tests/integration tests/tools",
+    "test:lifecycle": "vitest run tests/engine/permanence-lifecycle.test.ts tests/engine/time-travel-deep.test.ts tests/engine/db-lifecycle.test.ts tests/engine/snapshots-deep.test.ts",
+    "test:multi-agent": "vitest run tests/integration/multi-agent-game.test.ts tests/integration/concurrency-stress.test.ts",
+    "test:property": "vitest run tests/engine/property-invariants.test.ts",
+    "test:stress": "vitest run tests/engine/geometry-frustum-stress.test.ts tests/integration/concurrency-stress.test.ts",
+    "test:unit": "vitest run tests/engine tests/utils tests/schema tests/browser",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "better-sqlite3": "^11.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@types/better-sqlite3": "^7.6.10",
+    "@types/node": "^20.12.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.8.0",
+    "prettier": "^3.9.6",
+    "tsup": "^8.1.0",
+    "typescript": "^5.5.2",
+    "typescript-eslint": "^8.63.0",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "@hono/node-server": "^2.0.5",
+    "esbuild": "^0.28.1",
+    "nanoid": "^3.3.18",
+    "vite": "^6.0.0"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}

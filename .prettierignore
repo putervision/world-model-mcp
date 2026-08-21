@@ -1,0 +1,9 @@
+dist
+node_modules
+coverage
+.world-model-mcp
+.state-memory-mcp
+.vision-memory-mcp
+*.md
+docs/*.html
+docs/*.css

@@ -1,0 +1,21 @@
+# Exclude development files from npm registry
+tests/
+src/
+tsconfig.json
+tsup.config.ts
+eslint.config.js
+.cursor/
+.vscode/
+.gemini/
+.state-memory-mcp/
+.vision-memory-mcp/
+.world-model-mcp/
+.github/
+.prettierrc
+.npmignore
+CLAUDE.md
+PROJECT_INSTRUCTIONS_TEMPLATE.md
+docs/
+*.db
+*.db-journal
+*.log
