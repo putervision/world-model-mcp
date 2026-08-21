@@ -19,8 +19,8 @@ export function translateLegacyWorldCall(toolName: string): string {
 
 export function adaptLegacyParameters(
   legacyToolName: string,
-  args: Record<string, any>
-): { tool: string; args: Record<string, any> } {
+  args: Record<string, unknown>
+): { tool: string; args: Record<string, unknown> } {
   const tool = translateLegacyWorldCall(legacyToolName);
   const adaptedArgs = { ...args };
 

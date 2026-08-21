@@ -104,11 +104,12 @@ describe('CLI Commands Comprehensive Suite', () => {
     logSpy.mockRestore();
   });
 
-  it('runs inspect, metrics, and map commands', async () => {
+  it('runs inspect, metrics, stats, and map commands', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     await expect(runInspect(['inspect'])).resolves.not.toThrow();
     await expect(runMetrics(['metrics'])).resolves.not.toThrow();
+    await expect(runMetrics(['stats'])).resolves.not.toThrow();
     await expect(runMap(['map'])).resolves.not.toThrow();
     await expect(runMap(['map', '--geojson'])).resolves.not.toThrow();
 

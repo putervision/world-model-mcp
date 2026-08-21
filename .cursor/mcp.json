@@ -26,6 +26,14 @@
       "env": {
         "WORLD_MODEL_MCP_PROJECT": "world-model-mcp"
       }
+    },
+    "webcrypt": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "webcrypt",
+        "mcp"
+      ]
     }
   }
 }

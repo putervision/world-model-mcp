@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 declare const __APP_VERSION__: string | undefined;
-const pkgVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.1.0";
+const pkgVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.3.0";
 
 function showHelp() {
   console.log(`
@@ -22,6 +22,7 @@ Commands:
   view               Open interactive 3D WebGL spatial visualizer in browser
   inspect            Display an ASCII table of stored entities and relations
   metrics            Display permanence decay, confidence, and spatial extents
+  stats              Alias for metrics command
   map                Output the full spatial map (JSON, GeoJSON, glTF, OBJ)
   summary            Output high-level world summary statistics
   tools              List all consolidated MCP tools and descriptions
@@ -116,6 +117,7 @@ async function runCli() {
       break;
     }
 
+    case "stats":
     case "metrics": {
       const { runMetrics } = await import("./cli/commands/metrics.js");
       await runMetrics(rawArgs);

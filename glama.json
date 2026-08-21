@@ -2,7 +2,7 @@
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "name": "world-model-mcp",
   "title": "World Model MCP",
-  "description": "Persistent 3D/2D spatial world model for AI coding and gaming agents to track entities, spatial relations, object permanence, and movement simulation.",
+  "description": "Persistent 3D/2D spatial world model for AI agents with entity tracking and simulation.",
   "maintainers": [
     "putervision"
   ],

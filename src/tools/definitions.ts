@@ -17,7 +17,7 @@ export const DESTRUCTIVE_ACTIONS = new Set([
 export interface ToolDefinition {
   name: string;
   description: string;
-  inputSchema: Record<string, any>;
+  inputSchema: Record<string, unknown>;
 }
 
 export const toolDefinitions: ToolDefinition[] = [

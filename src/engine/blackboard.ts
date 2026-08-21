@@ -26,15 +26,17 @@ export class SpatialBlackboard {
 
     // Collision intent check if spatial coordinates are present in payload
     const collisionWarnings: string[] = [];
-    const targetPos: Vector3D | undefined =
-      params.payload.position || params.payload.destination || params.payload.target_coords;
+    const targetPos = (params.payload.position ||
+      params.payload.destination ||
+      params.payload.target_coords) as Vector3D | undefined;
 
     if (targetPos && typeof targetPos.x === 'number') {
       const activeItems = this.read(db, { project: params.project, include_expired: false });
       for (const item of activeItems) {
         if (item.sender !== params.sender) {
-          const otherPos: Vector3D | undefined =
-            item.payload.position || item.payload.destination || item.payload.target_coords;
+          const otherPos = (item.payload.position ||
+            item.payload.destination ||
+            item.payload.target_coords) as Vector3D | undefined;
           if (otherPos && typeof otherPos.x === 'number') {
             const dist = vec3Distance(targetPos, otherPos);
             if (dist < 2.0) {

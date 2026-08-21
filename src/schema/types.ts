@@ -78,7 +78,7 @@ export interface Entity {
   confidence: number;
   parent_id?: string;
   region_id?: string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   tags: string[];
   last_seen_at: string;
   created_at: string;
@@ -94,7 +94,7 @@ export interface SpatialRelation {
   target_id: string;
   offset?: Vector3D;
   distance?: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -109,7 +109,7 @@ export interface EntityHistoryEvent {
   source: string;
   visual_state_id?: string;
   task_id?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   timestamp: string;
   prev_hash?: string;
   hash?: string;
@@ -169,7 +169,7 @@ export interface BlackboardItem {
   project: string;
   topic: string;
   sender: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   claimed_by?: string;
   claimed_until?: string;
   expires_at?: string;
@@ -248,7 +248,7 @@ export interface ObservationDetection {
   bounding_box_3d?: { center: Vector3D; size: BoundingBoxSize };
   estimated_position?: Vector3D;
   confidence: number;
-  attributes?: Record<string, any>;
+  attributes?: Record<string, unknown>;
 }
 
 export interface Observation {
@@ -308,7 +308,7 @@ export interface Region {
     min: Vector3D;
     max: Vector3D;
   };
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   created_at: string;
 }
 
@@ -515,7 +515,7 @@ export interface GameInputAction {
 
 export interface PlaywrightCommand {
   tool: 'browser_evaluate' | 'browser_press_key' | 'browser_click' | 'browser_wait_for';
-  args: Record<string, any>;
+  args: Record<string, unknown>;
   description: string;
 }
 

@@ -2,6 +2,12 @@
 
 All notable changes to `@putervision/world-model-mcp` will be documented in this file.
 
+## [0.3.0] - 2026-08-21
+
+### Changed
+- **Trimmed Registry Metadata Descriptions**: Compacted `server.json`, `glama.json`, and `manifest.json` descriptions to under 100 characters for optimal MCP registry display and catalog indexers.
+- **Version Bump (0.3.0)**: Synchronized version across package manifests, CLI runtime, Three.js browser bridge, test suites, and documentation.
+
 ## [0.2.0] - 2026-08-21
 
 ### Changed

@@ -22,43 +22,55 @@ import { SchemaAdvisor } from '../engine/advisor.js';
 import { worldToScreen, screenToWorldRay } from '../utils/projection.js';
 import { GameControlsEngine } from '../engine/game-controls.js';
 
-export function jsonSchemaToZod(schema: any): z.ZodTypeAny {
+interface JsonSchemaProperty {
+  type?: string;
+  enum?: string[];
+  items?: JsonSchemaProperty;
+  properties?: Record<string, JsonSchemaProperty>;
+  required?: string[];
+  description?: string;
+  [key: string]: unknown;
+}
+
+export function jsonSchemaToZod(schema: JsonSchemaProperty | unknown): z.ZodTypeAny {
   if (!schema || typeof schema !== 'object') {
-    return z.any();
+    return z.unknown();
   }
 
-  if (schema.type === 'string') {
-    if (schema.enum && Array.isArray(schema.enum) && schema.enum.length > 0) {
-      return z.enum(schema.enum as [string, ...string[]]);
+  const s = schema as JsonSchemaProperty;
+
+  if (s.type === 'string') {
+    if (s.enum && Array.isArray(s.enum) && s.enum.length > 0) {
+      return z.enum(s.enum as [string, ...string[]]);
     }
     return z.string();
   }
 
-  if (schema.type === 'number') {
+  if (s.type === 'number') {
     return z.number();
   }
 
-  if (schema.type === 'boolean') {
+  if (s.type === 'boolean') {
     return z.boolean();
   }
 
-  if (schema.type === 'array') {
-    const itemSchema = schema.items ? jsonSchemaToZod(schema.items) : z.any();
+  if (s.type === 'array') {
+    const itemSchema = s.items ? jsonSchemaToZod(s.items) : z.unknown();
     return z.array(itemSchema);
   }
 
-  if (schema.type === 'object') {
-    if (!schema.properties) {
-      return z.record(z.any());
+  if (s.type === 'object') {
+    if (!s.properties) {
+      return z.record(z.unknown());
     }
     const shape: Record<string, z.ZodTypeAny> = {};
-    const properties = schema.properties || {};
-    const required = new Set(schema.required || []);
+    const properties = s.properties || {};
+    const required = new Set(s.required || []);
 
     for (const [key, propSchema] of Object.entries(properties)) {
       let zodProp = jsonSchemaToZod(propSchema);
-      if ((propSchema as any).description) {
-        zodProp = zodProp.describe((propSchema as any).description);
+      if (propSchema.description) {
+        zodProp = zodProp.describe(propSchema.description);
       }
       if (!required.has(key)) {
         zodProp = zodProp.optional();
@@ -69,10 +81,12 @@ export function jsonSchemaToZod(schema: any): z.ZodTypeAny {
     return z.object(shape).passthrough();
   }
 
-  return z.any();
+  return z.unknown();
 }
 
-export function jsonSchemaToZodObject(schema: any): z.ZodObject<any> {
+export function jsonSchemaToZodObject(
+  schema: JsonSchemaProperty | unknown
+): z.ZodObject<z.ZodRawShape> {
   const zod = jsonSchemaToZod(schema);
   if (zod instanceof z.ZodObject) return zod;
   return z.object({}).passthrough();
@@ -84,7 +98,7 @@ export function registerAllTools(server: McpServer): void {
     const isDestructive = DESTRUCTIVE_ACTIONS.has(toolDef.name);
 
     const rawZodSchema = jsonSchemaToZod(toolDef.inputSchema);
-    const zodShape = (rawZodSchema as any).shape || {};
+    const zodShape = rawZodSchema instanceof z.ZodObject ? rawZodSchema.shape : {};
 
     server.registerTool(
       toolDef.name,
@@ -104,7 +118,7 @@ export function registerAllTools(server: McpServer): void {
           const isWrite = !isReadOnly;
           const db = isWrite ? getDb(project) : getReadOnlyDb(project);
 
-          let result: any;
+          let result: unknown;
 
           switch (name) {
             case 'update_entity': {
@@ -577,14 +591,15 @@ export function registerAllTools(server: McpServer): void {
               },
             ],
           };
-        } catch (err: any) {
-          const advice = SchemaAdvisor.getAdvice(toolDef.name, err.message, args);
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          const advice = SchemaAdvisor.getAdvice(toolDef.name, errMsg, args);
           return {
             isError: true,
             content: [
               {
                 type: 'text' as const,
-                text: `Error executing ${toolDef.name}: ${err.message}\n${advice}`,
+                text: `Error executing ${toolDef.name}: ${errMsg}\n${advice}`,
               },
             ],
           };

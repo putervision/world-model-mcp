@@ -14,6 +14,11 @@ export const server = new McpServer({
   version: VERSION,
 });
 
+function getVarString(val: string | string[] | undefined): string | undefined {
+  if (Array.isArray(val)) return val[0];
+  return val;
+}
+
 // Register Resource Templates
 server.registerResource(
   "world-summary",
@@ -23,8 +28,8 @@ server.registerResource(
     description: "High-level environment overview, entity counts, bounds, and permanence health",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const data = getWorldSummary(db, { project });
     return {
@@ -47,8 +52,8 @@ server.registerResource(
     description: "List of active entities in the environment",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const data = EntityStore.listEntities(db, { project, limit: 100 });
     return {
@@ -71,11 +76,12 @@ server.registerResource(
     description: "Entity position, bounding box, properties, and connected spatial relations",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
+    const entityId = getVarString(variables.id) || '';
     const db = getReadOnlyDb(project);
-    const entity = EntityStore.getEntity(db, { project, id: variables.id });
-    const relations = SpatialGraph.getRelations(db, { project, entity_id: variables.id });
+    const entity = EntityStore.getEntity(db, { project, id: entityId });
+    const relations = SpatialGraph.getRelations(db, { project, entity_id: entityId });
     return {
       contents: [
         {
@@ -96,8 +102,8 @@ server.registerResource(
     description: "Full spatial export of entities, relations, and regions",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const data = exportWorldModel(db, { project, format: "json" });
     return {
@@ -120,8 +126,8 @@ server.registerResource(
     description: "Active state-memory goal links and entity associations",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const data = GoalBridge.getLinkedGoals(db, { project });
     return {
@@ -144,8 +150,8 @@ server.registerResource(
     description: "Real-time health, SQLite status, and permanence metrics",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const summary = getWorldSummary(db, { project });
     return {
@@ -168,8 +174,8 @@ server.registerResource(
     description: "Active Spatial SDD baseline contracts",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const { SpatialSpecEngine } = await import("./engine/spatial-spec.js");
     const data = SpatialSpecEngine.listSpatialSpecs(db, { project });
@@ -193,8 +199,8 @@ server.registerResource(
     description: "Current active spatial blackboard messages",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const { SpatialBlackboard } = await import("./engine/blackboard.js");
     const data = SpatialBlackboard.read(db, { project, include_expired: false });
@@ -218,8 +224,8 @@ server.registerResource(
     description: "Recent cryptographic spatial evidence packs",
     mimeType: "application/json",
   },
-  async (uri: URL, variables: any) => {
-    const project = getProjectSlug(variables.project);
+  async (uri: URL, variables) => {
+    const project = getProjectSlug(getVarString(variables.project));
     const db = getReadOnlyDb(project);
     const { EvidenceEngine } = await import("./engine/evidence.js");
     const data = EvidenceEngine.listEvidencePacks(db, { project });

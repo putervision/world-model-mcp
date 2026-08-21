@@ -29,5 +29,15 @@
         "WORLD_MODEL_MCP_PROJECT": "world-model-mcp"
       }
     }
+  },
+  "mcpServers": {
+    "webcrypt": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "webcrypt",
+        "mcp"
+      ]
+    }
   }
 }

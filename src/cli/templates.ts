@@ -53,7 +53,7 @@ ALWAYS query the world model for spatial layout, entity positions, and object pe
 `;
 }
 
-export function getMcpConfigCursor(projectSlug: string): any {
+export function getMcpConfigCursor(projectSlug: string): Record<string, unknown> {
   return {
     mcpServers: {
       'world-model-mcp': {
@@ -67,7 +67,7 @@ export function getMcpConfigCursor(projectSlug: string): any {
   };
 }
 
-export function getMcpConfigVscode(projectSlug: string): any {
+export function getMcpConfigVscode(projectSlug: string): Record<string, unknown> {
   return {
     servers: {
       'world-model-mcp': {
@@ -82,7 +82,7 @@ export function getMcpConfigVscode(projectSlug: string): any {
   };
 }
 
-export function getMcpConfigAntigravity(): any {
+export function getMcpConfigAntigravity(): Record<string, unknown> {
   return {
     mcpServers: {
       'world-model-mcp': {

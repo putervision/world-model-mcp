@@ -7,7 +7,6 @@ import {
   pointInFrustumCone,
   vec3Sub,
   vec3Normalize,
-  vec3Distance,
   aabbFromCenterSize,
   rayAabbIntersect,
 } from '../utils/math.js';

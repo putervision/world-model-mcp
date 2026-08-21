@@ -1,5 +1,4 @@
 import Database from 'better-sqlite3';
-import { Entity } from '../schema/types.js';
 import { EntityStore } from './entity-store.js';
 import {
   Vector3D,

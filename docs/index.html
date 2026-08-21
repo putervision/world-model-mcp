@@ -52,11 +52,78 @@
       min-height: 380px;
     }
 
-    canvas#radarCanvas {
+    canvas#radarCanvas, canvas#simCanvas {
       width: 100%;
       height: 380px;
       display: block;
       cursor: crosshair;
+    }
+
+    .sim-arena-container {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 2rem;
+      margin-top: 1.5rem;
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .sim-arena-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .sim-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .sim-hud {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: "Fira Code", monospace;
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .sim-hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-badge-ok {
+      color: #34d399;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .status-badge-warn {
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
     }
 
     .radar-controls {
@@ -274,9 +341,10 @@
     <nav aria-label="Main Navigation">
       <ul class="nav-links">
         <li><a href="#radar">Spatial Radar</a></li>
+        <li><a href="#simulation">Movement & Nav</a></li>
         <li><a href="#triad">PuterVision Triad</a></li>
         <li><a href="#features">Features</a></li>
-        <li><a href="#tools">21 MCP Tools</a></li>
+        <li><a href="#tools">15 MCP Tools</a></li>
         <li><a href="#quickstart">Quickstart</a></li>
       </ul>
     </nav>
@@ -291,14 +359,15 @@
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <span class="badge">RELEASE v0.1.0 • LOCAL-FIRST SQLITE WAL • 21 CONSOLIDATED MCP TOOLS</span>
+      <span class="badge">RELEASE v0.3.0 • LOCAL-FIRST SQLITE WAL • 15 CONSOLIDATED MCP TOOLS</span>
       <h1>Deterministic 3D/2D Spatial World Model for AI Agents</h1>
       <p>Bridges perception and action with persistent entity tracking, topological spatial relationships, object permanence with confidence decay, movement simulation, spatial SDD, and Playwright 3D game navigation.</p>
 
       <div class="cta-group">
         <a href="#radar" class="btn-primary">Explore Live Spatial Radar</a>
-        <a href="#quickstart" class="btn-secondary">Setup Quickstart</a>
-        <a href="#tools" class="btn-secondary">View 21 Tools</a>
+        <a href="#simulation" class="btn-secondary" style="border-color: var(--accent-cyan);">🎮 Movement & Nav Simulator</a>
+        <a href="game-demo.html" target="_blank" class="btn-secondary" style="border-color: #a855f7; color: #d8b4fe;">3D Arena Demo ↗</a>
+        <a href="#tools" class="btn-secondary">View 15 Tools</a>
       </div>
     </section>
 
@@ -420,11 +489,69 @@
       </div>
     </section>
 
-    <!-- 19 MCP Tools Reference Table -->
+    <!-- Interactive 3D Movement Simulation & Playwright Keypress Workbench -->
+    <section id="simulation" class="card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+          <h2>Interactive Movement Simulation & Playwright Generator</h2>
+          <p style="color: var(--text-secondary);">
+            Test real-time AABB collision avoidance (<code>simulate_movement</code>) and Playwright WASD automated action sequence generation (<code>generate_game_inputs</code>). Click anywhere to move the Target Goal or drag the Agent & Obstacles!
+          </p>
+        </div>
+        <div class="btn-group">
+          <button id="simAnimateBtn" class="btn-primary" style="padding: 0.4rem 0.9rem; font-size: 0.85rem;">▶ Simulate Trajectory</button>
+          <button id="simResetBtn" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Reset Arena</button>
+          <a href="game-demo.html" target="_blank" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem; border-color: #a855f7; color: #d8b4fe;">🎮 Launch 3D Game Arena ↗</a>
+        </div>
+      </div>
+
+      <div class="sim-arena-container">
+        <div class="canvas-wrap" style="background: radial-gradient(circle at center, rgba(139, 92, 246, 0.08) 0%, rgba(11, 15, 25, 0.95) 70%); border-color: rgba(139, 92, 246, 0.3);">
+          <canvas id="simCanvas" width="600" height="380"></canvas>
+        </div>
+
+        <div class="sim-controls">
+          <div class="sim-hud">
+            <div class="sim-hud-row">
+              <span style="color: var(--text-secondary);">Collision Detection:</span>
+              <span id="simCollisionStatus" class="status-badge-ok">✅ Clear Corridor</span>
+            </div>
+            <div class="sim-hud-row">
+              <span style="color: var(--text-secondary);">Nav Waypoints:</span>
+              <span id="simWaypointsCount" style="color: var(--accent-cyan);">2 Waypoints</span>
+            </div>
+            <div class="sim-hud-row">
+              <span style="color: var(--text-secondary);">Estimated Action Time:</span>
+              <span id="simDurationEst" style="color: #fbbf24;">~620ms</span>
+            </div>
+          </div>
+
+          <div class="control-row">
+            <label>Agent Move Speed: <span id="simSpeedVal" style="color: var(--accent-cyan);">5.0 m/s</span></label>
+            <input type="range" id="simSpeedSlider" min="1" max="15" step="0.5" value="5">
+          </div>
+
+          <div class="control-row">
+            <label>Agent Turn Speed: <span id="simTurnVal" style="color: var(--accent-cyan);">90 °/s</span></label>
+            <input type="range" id="simTurnSlider" min="30" max="360" step="10" value="90">
+          </div>
+
+          <div class="control-row">
+            <label>Generated Playwright TypeScript Code:</label>
+            <div class="code-box" style="padding: 0.6rem 0.8rem; font-size: 0.78rem; max-height: 140px; overflow-y: auto;">
+              <button class="copy-btn" onclick="copyCode(this)" style="top: 0.3rem; right: 0.3rem;">Copy</button>
+              <pre><code id="simPlaywrightCode" class="language-typescript">// Calculating action stream...</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 MCP Tools Reference Table -->
     <section id="tools" class="card">
-      <h2>19 Consolidated MCP Tools</h2>
+      <h2>15 Consolidated MCP Tools</h2>
       <p style="color: var(--text-secondary);">
-        Complete tool reference categorized into Spatial Memory, Vision Integration, Goal Integration, Spatial SDD & Proofs, and Multi-Agent & Replay.
+        Complete tool reference categorized into Spatial Memory, Simulation & Vision Integration, Goal Integration, Spatial SDD & Proofs, and Multi-Agent & Replay.
       </p>
 
       <div class="tool-table-wrap">
@@ -443,99 +570,64 @@
               <td><code>update_entity</code></td>
               <td>Spatial Memory</td>
               <td><span class="badge-mut">Mutating</span></td>
-              <td><code>name, type, position, bbox, properties</code></td>
+              <td><code>name, type, position, bounding_box, properties</code></td>
               <td>Create or update an entity (position, orientation, bounding box, properties, confidence)</td>
             </tr>
             <tr>
               <td><code>query_entities</code></td>
               <td>Spatial Memory</td>
               <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>query, type, near_position, max_distance</code></td>
-              <td>Search entities by keyword (FTS5), type, region, spatial proximity, tags, or status</td>
-            </tr>
-            <tr>
-              <td><code>get_location</code></td>
-              <td>Spatial Memory</td>
-              <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>entity_id, include_history</code></td>
-              <td>Get current, last-known, or historical positions and trajectory history of an entity</td>
+              <td><code>query, type, near_position, entity_id, include_history</code></td>
+              <td>Search entities by keyword (FTS5), proximity radius, tags, status, or fetch specific entity location &amp; trajectory history</td>
             </tr>
             <tr>
               <td><code>set_relation</code></td>
               <td>Spatial Memory</td>
               <td><span class="badge-mut">Mutating</span></td>
               <td><code>source_id, relation, target_id, offset</code></td>
-              <td>Record spatial relationships (on, inside, next_to, above, below, near, contains)</td>
+              <td>Record or remove spatial relationships (on, inside, next_to, above, below, near, contains)</td>
             </tr>
             <tr>
               <td><code>get_spatial_map</code></td>
               <td>Spatial Memory</td>
               <td><span class="badge-ro">Read-Only</span></td>
               <td><code>region_id, format, min_confidence</code></td>
-              <td>Export structured spatial layout (JSON, GeoJSON, glTF 2.0, OBJ)</td>
+              <td>Export structured spatial layout (JSON, GeoJSON, glTF 2.0, OBJ) or high-level summary (<code>format: "summary"</code>)</td>
             </tr>
             <tr>
               <td><code>simulate_movement</code></td>
-              <td>Spatial Memory</td>
+              <td>Simulation</td>
               <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>entity_id, delta_position, check_collisions</code></td>
-              <td>Predict trajectory and test for AABB obstacle collisions</td>
-            </tr>
-            <tr>
-              <td><code>get_navigation_hints</code></td>
-              <td>Spatial Memory</td>
-              <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>start_entity_id, target_entity_id</code></td>
-              <td>Compute topological or waypoint navigation paths between entities/locations</td>
+              <td><code>entity_id, delta_position, mode, check_collisions</code></td>
+              <td>Predict trajectory, test for AABB obstacle collisions, or compute waypoint navigation paths (<code>mode: "navigate"</code>)</td>
             </tr>
             <tr>
               <td><code>ingest_observation</code></td>
-              <td>Vision Integration</td>
+              <td>Perception</td>
               <td><span class="badge-mut">Mutating</span></td>
-              <td><code>observer_pose, detections, visual_state_id</code></td>
-              <td>Ingest structured perception detections into world model; re-identify entities</td>
-            </tr>
-            <tr>
-              <td><code>reconcile_observation</code></td>
-              <td>Vision Integration</td>
-              <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>observer_pose, detections</code></td>
-              <td>Compare incoming vision data against expected frustum view (diff & anomalies)</td>
+              <td><code>observer_pose, detections, visual_state_id, reconcile</code></td>
+              <td>Ingest structured perception detections into world model; re-identify entities and reconcile frustum view (<code>reconcile: true</code>)</td>
             </tr>
             <tr>
               <td><code>get_expected_view</code></td>
-              <td>Vision Integration</td>
+              <td>Perception</td>
               <td><span class="badge-ro">Read-Only</span></td>
               <td><code>observer_position, observer_orientation, fov</code></td>
               <td>Calculate visible entities from observer pose with 3D ray-AABB occlusion culling</td>
             </tr>
             <tr>
-              <td><code>get_relevant_context</code></td>
-              <td>Goal Integration</td>
-              <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>task_id, current_agent_position, radius</code></td>
-              <td>Extract spatial slice relevant to active goal/task</td>
-            </tr>
-            <tr>
               <td><code>link_to_goal</code></td>
               <td>Goal Integration</td>
               <td><span class="badge-mut">Mutating</span></td>
-              <td><code>task_id, entity_id, relationship</code></td>
-              <td>Associate entities/regions with state-memory task IDs</td>
+              <td><code>action, task_id, entity_id, relationship</code></td>
+              <td>Associate entities/regions with state-memory task IDs, or extract goal-relevant spatial context slices (<code>action: "get_context"</code>)</td>
             </tr>
             <tr>
               <td><code>record_outcome</code></td>
               <td>Goal Integration</td>
               <td><span class="badge-mut">Mutating</span></td>
               <td><code>action_name, success, resulting_position</code></td>
-              <td>Update world model after action execution completes</td>
-            </tr>
-            <tr>
-              <td><code>get_world_summary</code></td>
-              <td>Utility</td>
-              <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>project</code></td>
-              <td>High-level environment overview, entity breakdown, and bounds</td>
+              <td>Update world model after action execution completes (position, properties, destruction)</td>
             </tr>
             <tr>
               <td><code>manage_spatial_spec</code></td>
@@ -556,35 +648,28 @@
               <td>Multi-Agent</td>
               <td><span class="badge-mut">Mutating</span></td>
               <td><code>action, topic, sender, payload, ttl</code></td>
-              <td>Topic-based multi-agent coordination with TTL and collision intent alerts</td>
+              <td>Topic-based multi-agent coordination with TTL, mutex locks, and collision intent alerts</td>
             </tr>
             <tr>
-              <td><code>undo_mutation</code></td>
-              <td>Replay</td>
+              <td><code>manage_snapshot</code></td>
+              <td>Replay &amp; Snapshots</td>
               <td><span class="badge-mut">Mutating</span></td>
-              <td><code>entity_id, type</code></td>
-              <td>Revert latest entity mutation from cryptographic event ledger</td>
-            </tr>
-            <tr>
-              <td><code>wait_for_spatial_state</code></td>
-              <td>Utility</td>
-              <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>entity_id, condition, timeout_ms</code></td>
-              <td>Poll until target spatial condition is satisfied</td>
-            </tr>
-            <tr>
-              <td><code>project_to_screen</code></td>
-              <td>Playwright &amp; Games</td>
-              <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>entity_id, camera, viewport, direction</code></td>
-              <td>Translate 3D coordinates to 2D viewport screen pixels or unproject screen clicks into 3D world rays</td>
+              <td><code>action, name, snapshot_a, snapshot_b, entity_id</code></td>
+              <td>Unified snapshot and time-travel management: checkpoints, diffs, undo mutations, and historical replay</td>
             </tr>
             <tr>
               <td><code>generate_game_inputs</code></td>
               <td>Playwright &amp; Games</td>
               <td><span class="badge-ro">Read-Only</span></td>
-              <td><code>entity_id, target_entity_id, control_profile</code></td>
-              <td>Translate 3D waypoints into timed WASD/Arrow key hold sequences and Playwright commands</td>
+              <td><code>action, entity_id, target_position, camera, viewport</code></td>
+              <td>Translate 3D waypoints into Playwright keyboard/mouse inputs or project/unproject screen coordinates</td>
+            </tr>
+            <tr>
+              <td><code>wait_for_spatial_state</code></td>
+              <td>Async Polling</td>
+              <td><span class="badge-ro">Read-Only</span></td>
+              <td><code>entity_id, condition, threshold, timeout_ms</code></td>
+              <td>Poll and wait until target spatial condition is satisfied (exists, active, confidence threshold, region)</td>
             </tr>
           </tbody>
         </table>
@@ -982,10 +1067,525 @@ console.log("Visible Entities:", expected.visible_entities);</code></pre>
       updateControls();
     }
 
+    // Interactive 3D Movement Simulation & Playwright Code Generator
+    function initSimulation() {
+      const canvas = document.getElementById("simCanvas");
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width || 600;
+        canvas.height = rect.height || 380;
+      }
+      resizeCanvas();
+      window.addEventListener("resize", () => {
+        resizeCanvas();
+        drawSimulation();
+      });
+
+      let moveSpeed = 5.0; // m/s
+      let turnSpeed = 90.0; // deg/s
+      let isAnimating = false;
+      let animFrameId = null;
+
+      let defaultAgent = { x: -20, z: -8, yaw: 0 };
+      let agent = { ...defaultAgent };
+      let goal = { x: 20, z: 12, name: "Treasure Chest" };
+      let obstacles = [
+        { id: 1, x: 0, z: 2, w: 6, d: 20, name: "Stone Wall A", color: "#f87171" },
+        { id: 2, x: -11, z: 12, w: 9, d: 5, name: "Barrier B", color: "#fb923c" }
+      ];
+
+      const speedSlider = document.getElementById("simSpeedSlider");
+      const turnSlider = document.getElementById("simTurnSlider");
+      const speedVal = document.getElementById("simSpeedVal");
+      const turnVal = document.getElementById("simTurnVal");
+      const colStatus = document.getElementById("simCollisionStatus");
+      const wpCount = document.getElementById("simWaypointsCount");
+      const durEst = document.getElementById("simDurationEst");
+      const codeBlock = document.getElementById("simPlaywrightCode");
+      const animateBtn = document.getElementById("simAnimateBtn");
+      const resetBtn = document.getElementById("simResetBtn");
+
+      // Line Segment to AABB Box Intersection Check
+      function lineIntersectsAABB(p1, p2, box) {
+        const minX = box.x - box.w / 2;
+        const maxX = box.x + box.w / 2;
+        const minZ = box.z - box.d / 2;
+        const maxZ = box.z + box.d / 2;
+
+        function lineIntersectsSegment(a, b, c, d) {
+          const det = (b.x - a.x) * (d.z - c.z) - (b.z - a.z) * (d.x - c.x);
+          if (det === 0) return false;
+          const lambda = ((d.z - c.z) * (d.x - a.x) + (c.x - d.x) * (d.z - a.z)) / det;
+          const gamma = ((a.z - b.z) * (d.x - a.x) + (b.x - a.x) * (d.z - a.z)) / det;
+          return (0 <= lambda && lambda <= 1) && (0 <= gamma && gamma <= 1);
+        }
+
+        // Check 4 edges of the AABB
+        const tl = { x: minX, z: minZ };
+        const tr = { x: maxX, z: minZ };
+        const br = { x: maxX, z: maxZ };
+        const bl = { x: minX, z: maxZ };
+
+        if (p1.x >= minX && p1.x <= maxX && p1.z >= minZ && p1.z <= maxZ) return true;
+        if (p2.x >= minX && p2.x <= maxX && p2.z >= minZ && p2.z <= maxZ) return true;
+
+        return lineIntersectsSegment(p1, p2, tl, tr) ||
+               lineIntersectsSegment(p1, p2, tr, br) ||
+               lineIntersectsSegment(p1, p2, br, bl) ||
+               lineIntersectsSegment(p1, p2, bl, tl);
+      }
+
+      function computeNavPath(start, target, obsList) {
+        let directCollision = null;
+        for (const obs of obsList) {
+          if (lineIntersectsAABB(start, target, obs)) {
+            directCollision = obs;
+            break;
+          }
+        }
+
+        if (!directCollision) {
+          return { waypoints: [{ x: start.x, z: start.z }, { x: target.x, z: target.z }], hasCollision: false, collisionObs: null };
+        }
+
+        // Calculate bypass waypoint around the collision obstacle
+        const margin = 3.5;
+        const candidateWaypoints = [
+          { x: directCollision.x, z: directCollision.z + directCollision.d / 2 + margin },
+          { x: directCollision.x, z: directCollision.z - directCollision.d / 2 - margin },
+          { x: directCollision.x + directCollision.w / 2 + margin, z: directCollision.z },
+          { x: directCollision.x - directCollision.w / 2 - margin, z: directCollision.z }
+        ];
+
+        // Choose best candidate that minimizes total distance and is collision-free
+        let bestWp = candidateWaypoints[0];
+        let bestDist = Infinity;
+
+        for (const wp of candidateWaypoints) {
+          const d1 = Math.hypot(wp.x - start.x, wp.z - start.z);
+          const d2 = Math.hypot(target.x - wp.x, target.z - wp.z);
+          const total = d1 + d2;
+          if (total < bestDist) {
+            bestDist = total;
+            bestWp = wp;
+          }
+        }
+
+        return {
+          waypoints: [{ x: start.x, z: start.z }, bestWp, { x: target.x, z: target.z }],
+          hasCollision: true,
+          collisionObs: directCollision
+        };
+      }
+
+      function generatePlaywrightScript(pathResult, mSpeed, tSpeed) {
+        const waypoints = pathResult.waypoints;
+        let script = "import { Page } from '@playwright/test';\n\n";
+        script += "export async function executeGameNavigation(page: Page): Promise<void> {\n";
+
+        let currentYaw = agent.yaw;
+        let totalDurationMs = 0;
+
+        for (let i = 1; i < waypoints.length; i++) {
+          const from = waypoints[i - 1];
+          const to = waypoints[i];
+
+          const dx = to.x - from.x;
+          const dz = to.z - from.z;
+          const dist = Math.hypot(dx, dz);
+
+          let targetAngleRad = Math.atan2(dx, dz);
+          let targetAngleDeg = (targetAngleRad * 180) / Math.PI;
+          if (targetAngleDeg < 0) targetAngleDeg += 360;
+
+          let diffAngle = targetAngleDeg - currentYaw;
+          while (diffAngle > 180) diffAngle -= 360;
+          while (diffAngle < -180) diffAngle += 360;
+
+          const turnMs = Math.round((Math.abs(diffAngle) / tSpeed) * 1000);
+          const moveMs = Math.round((dist / mSpeed) * 1000);
+
+          totalDurationMs += turnMs + moveMs;
+
+          if (turnMs > 10) {
+            const turnKey = diffAngle < 0 ? "ArrowLeft" : "ArrowRight";
+            const dirLabel = diffAngle < 0 ? "left" : "right";
+            script += `  // Leg ${i}: Turn ${dirLabel} (${Math.abs(diffAngle).toFixed(0)}°) towards waypoint\n`;
+            script += `  await page.keyboard.down('${turnKey}');\n`;
+            script += `  await page.waitForTimeout(${turnMs});\n`;
+            script += `  await page.keyboard.up('${turnKey}');\n`;
+          }
+
+          script += `  // Leg ${i}: Move forward ${dist.toFixed(1)}m\n`;
+          script += `  await page.keyboard.down('KeyW');\n`;
+          script += `  await page.waitForTimeout(${moveMs});\n`;
+          script += `  await page.keyboard.up('KeyW');\n`;
+
+          currentYaw = targetAngleDeg;
+        }
+
+        script += "}\n";
+        return { script, totalDurationMs };
+      }
+
+      function updateSimState() {
+        if (speedSlider) moveSpeed = parseFloat(speedSlider.value);
+        if (turnSlider) turnSpeed = parseFloat(turnSlider.value);
+
+        if (speedVal) speedVal.innerText = moveSpeed.toFixed(1) + " m/s";
+        if (turnVal) turnVal.innerText = turnSpeed.toFixed(0) + " °/s";
+
+        const pathResult = computeNavPath(agent, goal, obstacles);
+        const { script, totalDurationMs } = generatePlaywrightScript(pathResult, moveSpeed, turnSpeed);
+
+        if (colStatus) {
+          if (pathResult.hasCollision) {
+            colStatus.className = "status-badge-warn";
+            colStatus.innerText = "⚠️ AABB Intersect (" + pathResult.collisionObs.name + ")";
+          } else {
+            colStatus.className = "status-badge-ok";
+            colStatus.innerText = "✅ Clear Corridor (0 Collisions)";
+          }
+        }
+
+        if (wpCount) wpCount.innerText = pathResult.waypoints.length + " Waypoints";
+        if (durEst) durEst.innerText = "~" + totalDurationMs + "ms";
+        if (codeBlock) codeBlock.innerText = script;
+
+        drawSimulation(pathResult);
+      }
+
+      function drawSimulation(pathResult) {
+        if (!pathResult) pathResult = computeNavPath(agent, goal, obstacles);
+
+        const w = canvas.width;
+        const h = canvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const scale = 6.5;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Coordinate Grid
+        ctx.strokeStyle = "rgba(139, 92, 246, 0.12)";
+        ctx.lineWidth = 1;
+        for (let x = -30; x <= 30; x += 10) {
+          ctx.beginPath();
+          ctx.moveTo(cx + x * scale, 0);
+          ctx.lineTo(cx + x * scale, h);
+          ctx.stroke();
+        }
+        for (let z = -20; z <= 20; z += 10) {
+          ctx.beginPath();
+          ctx.moveTo(0, cy - z * scale);
+          ctx.lineTo(w, cy - z * scale);
+          ctx.stroke();
+        }
+
+        // Axes
+        ctx.strokeStyle = "rgba(139, 92, 246, 0.25)";
+        ctx.beginPath();
+        ctx.moveTo(cx, 0); ctx.lineTo(cx, h);
+        ctx.moveTo(0, cy); ctx.lineTo(w, cy);
+        ctx.stroke();
+
+        // Draw Obstacles (AABB Boxes)
+        obstacles.forEach(obs => {
+          const obPx = cx + (obs.x - obs.w / 2) * scale;
+          const obPy = cy - (obs.z + obs.d / 2) * scale;
+          const obPw = obs.w * scale;
+          const obPh = obs.d * scale;
+
+          // Safety clearance bounding area
+          ctx.strokeStyle = "rgba(248, 113, 113, 0.35)";
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(obPx - 6, obPy - 6, obPw + 12, obPh + 12);
+          ctx.setLineDash([]);
+
+          // Obstacle Body
+          ctx.fillStyle = "rgba(248, 113, 113, 0.25)";
+          ctx.strokeStyle = obs.color || "#f87171";
+          ctx.lineWidth = 2;
+          ctx.fillRect(obPx, obPy, obPw, obPh);
+          ctx.strokeRect(obPx, obPy, obPw, obPh);
+          ctx.lineWidth = 1;
+
+          // Obstacle Label
+          ctx.fillStyle = "#fca5a5";
+          ctx.font = "10px Fira Code, monospace";
+          ctx.fillText(obs.name + " (" + obs.w + "x" + obs.d + "m)", obPx + 4, obPy + 14);
+        });
+
+        // Draw Collision Straight Line (if colliding)
+        if (pathResult.hasCollision) {
+          ctx.strokeStyle = "rgba(248, 113, 113, 0.4)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.moveTo(cx + agent.x * scale, cy - agent.z * scale);
+          ctx.lineTo(cx + goal.x * scale, cy - goal.z * scale);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Draw Waypoint Navigation Path
+        const wps = pathResult.waypoints;
+        ctx.strokeStyle = "#a855f7";
+        ctx.lineWidth = 3;
+        ctx.shadowColor = "rgba(168, 85, 247, 0.6)";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(cx + wps[0].x * scale, cy - wps[0].z * scale);
+        for (let i = 1; i < wps.length; i++) {
+          ctx.lineTo(cx + wps[i].x * scale, cy - wps[i].z * scale);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 1;
+
+        // Draw Waypoint nodes
+        wps.forEach((wp, idx) => {
+          const px = cx + wp.x * scale;
+          const py = cy - wp.z * scale;
+          ctx.fillStyle = idx === 0 ? "#06b6d4" : (idx === wps.length - 1 ? "#fbbf24" : "#a855f7");
+          ctx.beginPath();
+          ctx.arc(px, py, idx === 0 || idx === wps.length - 1 ? 6 : 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.stroke();
+        });
+
+        // Draw Goal Target (Treasure Chest)
+        const gx = cx + goal.x * scale;
+        const gy = cy - goal.z * scale;
+
+        // Pulsing goal ring
+        ctx.strokeStyle = "rgba(251, 191, 36, 0.5)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(gx, gy, 12, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = "#fbbf24";
+        ctx.fillRect(gx - 6, gy - 6, 12, 12);
+        ctx.strokeStyle = "#ffffff";
+        ctx.strokeRect(gx - 6, gy - 6, 12, 12);
+
+        ctx.fillStyle = "#fde68a";
+        ctx.font = "11px sans-serif";
+        ctx.fillText("🎯 " + goal.name, gx + 12, gy + 4);
+
+        // Draw Agent Knight
+        const ax = cx + agent.x * scale;
+        const ay = cy - agent.z * scale;
+
+        ctx.fillStyle = "#06b6d4";
+        ctx.beginPath();
+        ctx.arc(ax, ay, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.lineWidth = 1;
+
+        // Heading arrow
+        const yawRad = (agent.yaw * Math.PI) / 180;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(ax + Math.sin(yawRad) * 16, ay - Math.cos(yawRad) * 16);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+
+        ctx.fillStyle = "#67e8f9";
+        ctx.font = "11px sans-serif";
+        ctx.fillText("🤖 Knight (" + agent.x.toFixed(1) + ", " + agent.z.toFixed(1) + ")", ax + 12, ay - 6);
+      }
+
+      // Mouse drag & click interactions
+      let draggingItem = null; // 'agent' | 'goal' | obs object
+      canvas.addEventListener("mousedown", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const scale = 6.5;
+
+        const worldX = (mouseX - cx) / scale;
+        const worldZ = (cy - mouseY) / scale;
+
+        // Check if clicked near agent
+        if (Math.hypot(worldX - agent.x, worldZ - agent.z) < 4) {
+          draggingItem = 'agent';
+          return;
+        }
+
+        // Check if clicked near goal
+        if (Math.hypot(worldX - goal.x, worldZ - goal.z) < 4) {
+          draggingItem = 'goal';
+          return;
+        }
+
+        // Check if clicked on obstacle
+        for (const obs of obstacles) {
+          if (Math.abs(worldX - obs.x) <= obs.w / 2 && Math.abs(worldZ - obs.z) <= obs.d / 2) {
+            draggingItem = obs;
+            return;
+          }
+        }
+
+        // If clicked in empty space, move goal there
+        goal.x = Math.round(worldX * 2) / 2;
+        goal.z = Math.round(worldZ * 2) / 2;
+        updateSimState();
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        if (!draggingItem) return;
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const scale = 6.5;
+
+        const worldX = (mouseX - cx) / scale;
+        const worldZ = (cy - mouseY) / scale;
+
+        if (draggingItem === 'agent') {
+          agent.x = Math.round(worldX * 2) / 2;
+          agent.z = Math.round(worldZ * 2) / 2;
+        } else if (draggingItem === 'goal') {
+          goal.x = Math.round(worldX * 2) / 2;
+          goal.z = Math.round(worldZ * 2) / 2;
+        } else if (typeof draggingItem === 'object') {
+          draggingItem.x = Math.round(worldX * 2) / 2;
+          draggingItem.z = Math.round(worldZ * 2) / 2;
+        }
+
+        updateSimState();
+      });
+
+      window.addEventListener("mouseup", () => { draggingItem = null; });
+
+      if (speedSlider) speedSlider.addEventListener("input", updateSimState);
+      if (turnSlider) turnSlider.addEventListener("input", updateSimState);
+
+      if (resetBtn) {
+        resetBtn.addEventListener("click", () => {
+          if (animFrameId) cancelAnimationFrame(animFrameId);
+          isAnimating = false;
+          agent = { ...defaultAgent };
+          goal = { x: 20, z: 12, name: "Treasure Chest" };
+          obstacles = [
+            { id: 1, x: 0, z: 2, w: 6, d: 20, name: "Stone Wall A", color: "#f87171" },
+            { id: 2, x: -11, z: 12, w: 9, d: 5, name: "Barrier B", color: "#fb923c" }
+          ];
+          if (animateBtn) animateBtn.innerText = "▶ Simulate Trajectory";
+          updateSimState();
+        });
+      }
+
+      // Trajectory Animation Runner
+      if (animateBtn) {
+        animateBtn.addEventListener("click", () => {
+          if (isAnimating) {
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            isAnimating = false;
+            animateBtn.innerText = "▶ Simulate Trajectory";
+            return;
+          }
+
+          const pathResult = computeNavPath(agent, goal, obstacles);
+          const wps = pathResult.waypoints;
+          if (wps.length < 2) return;
+
+          isAnimating = true;
+          animateBtn.innerText = "⏹ Stop Simulation";
+
+          let legIdx = 1;
+          let from = { ...wps[0] };
+          let to = { ...wps[1] };
+          let legProgress = 0;
+          let lastTime = performance.now();
+
+          function stepAnim(now) {
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            const dx = to.x - from.x;
+            const dz = to.z - from.z;
+            const legDist = Math.hypot(dx, dz);
+
+            if (legDist > 0.01) {
+              const targetYawRad = Math.atan2(dx, dz);
+              let targetYaw = (targetYawRad * 180) / Math.PI;
+              if (targetYaw < 0) targetYaw += 360;
+              agent.yaw = targetYaw;
+
+              legProgress += (moveSpeed * dt) / legDist;
+              if (legProgress >= 1) {
+                legProgress = 1;
+                agent.x = to.x;
+                agent.z = to.z;
+
+                legIdx++;
+                if (legIdx < wps.length) {
+                  from = { ...wps[legIdx - 1] };
+                  to = { ...wps[legIdx] };
+                  legProgress = 0;
+                } else {
+                  isAnimating = false;
+                  animateBtn.innerText = "▶ Simulate Trajectory";
+                  updateSimState();
+                  return;
+                }
+              } else {
+                agent.x = from.x + dx * legProgress;
+                agent.z = from.z + dz * legProgress;
+              }
+            } else {
+              legIdx++;
+              if (legIdx < wps.length) {
+                from = { ...wps[legIdx - 1] };
+                to = { ...wps[legIdx] };
+                legProgress = 0;
+              } else {
+                isAnimating = false;
+                animateBtn.innerText = "▶ Simulate Trajectory";
+                updateSimState();
+                return;
+              }
+            }
+
+            drawSimulation(pathResult);
+            if (isAnimating) {
+              animFrameId = requestAnimationFrame(stepAnim);
+            }
+          }
+
+          animFrameId = requestAnimationFrame(stepAnim);
+        });
+      }
+
+      // Initial Draw
+      updateSimState();
+    }
+
     if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initRadar);
+      document.addEventListener("DOMContentLoaded", () => {
+        initRadar();
+        initSimulation();
+      });
     } else {
       initRadar();
+      initSimulation();
     }
   </script>
 </body>

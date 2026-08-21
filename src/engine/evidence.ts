@@ -6,24 +6,23 @@ import {
   EvidencePackRow,
   Entity,
   Observation,
-  SpatialRelation,
 } from '../schema/types.js';
 import { generateId } from '../utils/id.js';
 import { getCurrentIsoString } from '../utils/time.js';
 import { safeJsonParse } from '../utils/json-validator.js';
 import { EntityStore } from './entity-store.js';
 import { SpatialGraph } from './spatial-graph.js';
-import { parseRelationRow } from './row-mappers.js';
 
-export function canonicalJsonStringify(obj: any): string {
+export function canonicalJsonStringify(obj: unknown): string {
   if (obj === null || typeof obj !== 'object') {
     return JSON.stringify(obj);
   }
   if (Array.isArray(obj)) {
     return '[' + obj.map(canonicalJsonStringify).join(',') + ']';
   }
-  const keys = Object.keys(obj).sort();
-  const pairs = keys.map((k) => JSON.stringify(k) + ':' + canonicalJsonStringify(obj[k]));
+  const record = obj as Record<string, unknown>;
+  const keys = Object.keys(record).sort();
+  const pairs = keys.map((k) => JSON.stringify(k) + ':' + canonicalJsonStringify(record[k]));
   return '{' + pairs.join(',') + '}';
 }
 

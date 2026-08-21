@@ -14,7 +14,7 @@ describe('Three.js Browser Bridge (src/browser/threejs-bridge.ts)', () => {
 
   it('script defines valid JSON-compatible methods', () => {
     const script = getBridgeScript();
-    expect(script).toContain("version: '0.1.0'");
+    expect(script).toContain("version: '0.3.0'");
     expect(script).toContain('observer_pose:');
     expect(script).toContain('detections:');
   });

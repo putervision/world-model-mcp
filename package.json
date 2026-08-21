@@ -1,7 +1,7 @@
 {
   "name": "@putervision/world-model-mcp",
-  "version": "0.2.0",
-  "description": "Deterministic, persistent 3D/2D spatial world model for AI agents. Bridges perception (vision-memory-mcp) and action/reasoning (state-memory-mcp) with entity tracking, spatial relations, object permanence, movement simulation, and expected view frustum projection.",
+  "version": "0.3.0",
+  "description": "Deterministic, persistent 3D/2D spatial world model for AI agents with entity tracking, object permanence, movement simulation, and expected view frustum projection.",
   "keywords": [
     "mcp",
     "mcp-server",
@@ -88,6 +88,7 @@
     "test:e2e": "vitest run tests/integration/game-e2e-loop.test.ts",
     "test:integration": "vitest run tests/integration tests/tools",
     "test:lifecycle": "vitest run tests/engine/permanence-lifecycle.test.ts tests/engine/time-travel-deep.test.ts tests/engine/db-lifecycle.test.ts tests/engine/snapshots-deep.test.ts",
+    "test:matrix": "bash scripts/test-matrix.sh",
     "test:multi-agent": "vitest run tests/integration/multi-agent-game.test.ts tests/integration/concurrency-stress.test.ts",
     "test:property": "vitest run tests/engine/property-invariants.test.ts",
     "test:stress": "vitest run tests/engine/geometry-frustum-stress.test.ts tests/integration/concurrency-stress.test.ts",

@@ -1,7 +1,6 @@
 import Database from 'better-sqlite3';
 import { EntityStore } from './entity-store.js';
 import { SpatialGraph } from './spatial-graph.js';
-import { getEntityHistory } from './events.js';
 import { safeJsonParse } from '../utils/json-validator.js';
 
 export function exportWorldModel(
