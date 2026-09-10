@@ -94,4 +94,20 @@ describe('Game Controls Engine (src/engine/game-controls.ts)', () => {
     const waitAct = res.actions.find((a) => a.type === 'wait');
     expect(waitAct).toBeDefined();
   });
+
+  it('generates native desktop automation scripts (xdotool and powershell)', () => {
+    const res = GameControlsEngine.generateInputs({
+      current_position: { x: 0, y: 0, z: 0 },
+      current_orientation: { yaw: 0 },
+      target_position: { x: 10, y: 0, z: 10 },
+      control_profile: { scheme: 'wasd', move_speed: 5.0 },
+    });
+
+    expect(res.xdotool_script).toBeDefined();
+    expect(res.xdotool_script).toContain('#!/bin/bash');
+    expect(res.xdotool_script).toContain('xdotool');
+
+    expect(res.powershell_script).toBeDefined();
+    expect(res.powershell_script).toContain('SendKeys');
+  });
 });

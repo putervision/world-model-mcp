@@ -525,4 +525,6 @@ export interface GameInputSequence {
   estimated_duration_ms: number;
   requires_jump: boolean;
   playwright_script?: string;
+  xdotool_script?: string;
+  powershell_script?: string;
 }

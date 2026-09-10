@@ -6,6 +6,7 @@ import { getCurrentIsoString } from '../utils/time.js';
 import { Vector3D, Orientation3D, BoundingBoxSize, vec3Distance } from '../utils/math.js';
 import { logEntityEvent } from './events.js';
 import { ValidationError } from '../utils/errors.js';
+import { sanitizeKeys } from '../utils/sanitize.js';
 
 export class EntityStore {
   static addEntity(
@@ -27,6 +28,7 @@ export class EntityStore {
       source?: string;
       visual_state_id?: string;
       task_id?: string;
+      timestamp?: string;
     }
   ): Entity {
     if (!params.name || typeof params.name !== 'string') {
@@ -41,7 +43,7 @@ export class EntityStore {
     const status = params.status || 'active';
     const confidence =
       params.confidence !== undefined ? Math.max(0, Math.min(1, params.confidence)) : 1.0;
-    const properties = params.properties || {};
+    const properties = sanitizeKeys(params.properties || {});
     const tags = params.tags || [];
 
     const stmt = db.prepare(`
@@ -94,7 +96,7 @@ export class EntityStore {
         params.region_id ?? null,
         JSON.stringify(properties),
         JSON.stringify(tags),
-        now,
+        params.timestamp || now,
         now,
         now
       );
@@ -152,6 +154,7 @@ export class EntityStore {
       visual_state_id?: string;
       task_id?: string;
       expected_version?: number;
+      timestamp?: string;
     }
   ): Entity {
     const current = EntityStore.getEntity(db, { project: params.project, id: params.id });
@@ -177,7 +180,7 @@ export class EntityStore {
         : current.confidence;
     const updatedProperties =
       params.properties !== undefined
-        ? { ...current.properties, ...params.properties }
+        ? sanitizeKeys({ ...current.properties, ...params.properties })
         : current.properties;
     const updatedTags = params.tags !== undefined ? params.tags : current.tags;
 

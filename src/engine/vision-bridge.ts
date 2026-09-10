@@ -5,7 +5,7 @@ import { PermanenceEngine } from './permanence.js';
 import { FrustumEngine } from './frustum.js';
 import { generateId } from '../utils/id.js';
 import { getCurrentIsoString } from '../utils/time.js';
-import { Vector3D, Orientation3D, vec3Distance } from '../utils/math.js';
+import { Vector3D, Orientation3D, BoundingBoxSize, vec3Distance } from '../utils/math.js';
 
 export class VisionBridge {
   static ingestObservation(
@@ -216,6 +216,158 @@ export class VisionBridge {
       displaced,
       missing_or_occluded: missing,
       anomalies,
+    };
+  }
+
+  /**
+   * Ingests direct game engine telemetry (player coordinates, vitals, and entity positions)
+   * into the spatial world model with zero perception latency.
+   */
+  static ingestGameTelemetry(
+    db: Database.Database,
+    params: {
+      project: string;
+      player?: {
+        id?: string;
+        name?: string;
+        position: Vector3D;
+        orientation?: Orientation3D;
+        hp?: number;
+        max_hp?: number;
+        mana?: number;
+        properties?: Record<string, unknown>;
+      };
+      entities?: Array<{
+        id?: string;
+        name: string;
+        type?: 'npc' | 'item' | 'obstacle' | 'object' | 'agent';
+        position: Vector3D;
+        bounding_box?: BoundingBoxSize | { min: Vector3D; max: Vector3D };
+        properties?: Record<string, unknown>;
+      }>;
+    }
+  ): { player_id?: string; created_entities: string[]; updated_entities: string[] } {
+    const created: string[] = [];
+    const updated: string[] = [];
+    let playerId: string | undefined;
+
+    const toBoundingBoxSize = (
+      bb?: BoundingBoxSize | { min: Vector3D; max: Vector3D }
+    ): BoundingBoxSize | undefined => {
+      if (!bb) return undefined;
+      if ('width' in bb && 'height' in bb && 'depth' in bb) return bb as BoundingBoxSize;
+      if ('min' in bb && 'max' in bb) {
+        return {
+          width: Math.abs(bb.max.x - bb.min.x),
+          height: Math.abs(bb.max.y - bb.min.y),
+          depth: Math.abs(bb.max.z - bb.min.z),
+        };
+      }
+      return undefined;
+    };
+
+    db.transaction(() => {
+      // Ingest or update player entity
+      if (params.player) {
+        const pName = params.player.name || 'Player_Hero';
+        const pId = params.player.id || 'player_hero';
+        playerId = pId;
+
+        const existing = EntityStore.getEntity(db, { project: params.project, id: pId });
+        if (existing) {
+          EntityStore.updateEntity(db, {
+            project: params.project,
+            id: pId,
+            position: params.player.position,
+            orientation: params.player.orientation,
+            confidence: 1.0,
+            source: 'game_telemetry',
+            properties: {
+              ...existing.properties,
+              ...params.player.properties,
+              hp: params.player.hp,
+              max_hp: params.player.max_hp,
+              mana: params.player.mana,
+            },
+          });
+          updated.push(pId);
+        } else {
+          EntityStore.addEntity(db, {
+            id: pId,
+            project: params.project,
+            name: pName,
+            type: 'agent',
+            position: params.player.position,
+            orientation: params.player.orientation,
+            confidence: 1.0,
+            source: 'game_telemetry',
+            properties: {
+              ...params.player.properties,
+              hp: params.player.hp,
+              max_hp: params.player.max_hp,
+              mana: params.player.mana,
+            },
+          });
+          created.push(pId);
+        }
+      }
+
+      // Ingest or update world entities
+      if (params.entities && params.entities.length > 0) {
+        const existingEntities = EntityStore.listEntities(db, {
+          project: params.project,
+          status: 'active',
+          limit: 500,
+        });
+
+        for (const ent of params.entities) {
+          const match = ent.id
+            ? existingEntities.find((e) => e.id === ent.id)
+            : existingEntities.find(
+                (e) =>
+                  e.name.toLowerCase() === ent.name.toLowerCase() &&
+                  (e.position ? vec3Distance(e.position, ent.position) < 2.0 : false)
+              );
+
+          const bbox = toBoundingBoxSize(ent.bounding_box);
+
+          if (match) {
+            EntityStore.updateEntity(db, {
+              project: params.project,
+              id: match.id,
+              position: ent.position,
+              bounding_box: bbox,
+              confidence: 1.0,
+              source: 'game_telemetry',
+              properties: {
+                ...match.properties,
+                ...ent.properties,
+              },
+            });
+            updated.push(match.id);
+          } else {
+            const newId = ent.id || generateId();
+            EntityStore.addEntity(db, {
+              id: newId,
+              project: params.project,
+              name: ent.name,
+              type: ent.type || 'object',
+              position: ent.position,
+              bounding_box: bbox,
+              confidence: 1.0,
+              source: 'game_telemetry',
+              properties: ent.properties || {},
+            });
+            created.push(newId);
+          }
+        }
+      }
+    })();
+
+    return {
+      player_id: playerId,
+      created_entities: created,
+      updated_entities: updated,
     };
   }
 }

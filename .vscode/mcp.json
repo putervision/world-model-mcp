@@ -28,6 +28,26 @@
       "env": {
         "WORLD_MODEL_MCP_PROJECT": "world-model-mcp"
       }
+    },
+    "behavior-mcp": {
+      "type": "stdio",
+      "command": "behavior-mcp",
+      "args": [
+        "run"
+      ],
+      "env": {
+        "BEHAVIOR_PROJECT": "world-model-mcp"
+      }
+    },
+    "agent-reasoning-mcp": {
+      "type": "stdio",
+      "command": "agent-reasoning-mcp",
+      "args": [
+        "run"
+      ],
+      "env": {
+        "REASONING_PROJECT": "world-model-mcp"
+      }
     }
   },
   "mcpServers": {

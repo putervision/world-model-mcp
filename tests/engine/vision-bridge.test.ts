@@ -50,4 +50,55 @@ describe('Vision Bridge Complete', () => {
     const guard = EntityStore.getEntity(db, { project, id: existing.id });
     expect(guard?.confidence).toBe(1.0);
   });
+
+  it('ingests direct game engine telemetry with player coordinates and entity bounding boxes', () => {
+    const res = VisionBridge.ingestGameTelemetry(db, {
+      project,
+      player: {
+        id: 'player_hero',
+        name: 'Player_Hero',
+        position: { x: 12, y: 0, z: 18 },
+        orientation: { yaw: 90 },
+        hp: 85,
+        max_hp: 100,
+        mana: 50,
+      },
+      entities: [
+        {
+          id: 'boss_dragon',
+          name: 'Elder Dragon',
+          type: 'npc',
+          position: { x: 30, y: 5, z: 40 },
+          bounding_box: { min: { x: 28, y: 0, z: 38 }, max: { x: 32, y: 10, z: 42 } },
+        },
+      ],
+    });
+
+    expect(res.player_id).toBe('player_hero');
+    expect(res.created_entities).toContain('player_hero');
+    expect(res.created_entities).toContain('boss_dragon');
+
+    // Update telemetry
+    const updateRes = VisionBridge.ingestGameTelemetry(db, {
+      project,
+      player: {
+        id: 'player_hero',
+        position: { x: 15, y: 0, z: 20 },
+        hp: 70,
+      },
+      entities: [
+        {
+          id: 'boss_dragon',
+          name: 'Elder Dragon',
+          position: { x: 29, y: 5, z: 39 },
+        },
+      ],
+    });
+
+    expect(updateRes.updated_entities).toContain('player_hero');
+    expect(updateRes.updated_entities).toContain('boss_dragon');
+
+    const hero = EntityStore.getEntity(db, { project, id: 'player_hero' });
+    expect(hero?.properties.hp).toBe(70);
+  });
 });

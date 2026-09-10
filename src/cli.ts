@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 declare const __APP_VERSION__: string | undefined;
-const pkgVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.3.0";
+const pkgVersion = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "0.3.1";
 
 function showHelp() {
   console.log(`

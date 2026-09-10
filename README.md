@@ -153,7 +153,7 @@ When an autonomous AI agent enters a repository with `world-model-mcp`:
 ## 🧪 Testing
 
 ```bash
-# Run full unit, integration, and geometry stress test suite across 46 test files (202 tests)
+# Run full unit, integration, and geometry stress test suite across 47 test files (206 tests)
 npm test
 
 # Run multi-Node matrix test suite across Node.js 18, 20, and 22

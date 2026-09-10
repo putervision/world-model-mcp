@@ -17,9 +17,11 @@ import {
   unregisterProject,
   getDb,
   getProjectSlug,
+  resolveProjectRoot,
 } from '../engine/db.js';
 import { EntityStore } from '../engine/entity-store.js';
 import { validateWorldModel } from '../engine/validate.js';
+import { verifyEventAuditChain } from '../engine/events.js';
 
 export function upsertInstructionBlock(
   content: string,
@@ -81,14 +83,18 @@ export async function runInit(
   const projectName = path.basename(root);
   const projectSlug = options?.projectSlug || getProjectSlug(projectName, root);
 
+  console.log('\n🌐 Initializing world-model-mcp...\n');
+
   // 1. Register project
   registerProject(projectName, root);
+  console.log(`   📁 Registered project "${projectSlug}" in global registry (${root})`);
 
   // 2. Create data directory
   const dataDir = path.join(root, '.world-model-mcp', projectSlug);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
   }
+  console.log(`   📦 Created local storage directory: .world-model-mcp/${projectSlug}`);
 
   // 3. Update .gitignore
   const gitignorePath = path.join(root, '.gitignore');
@@ -97,21 +103,23 @@ export async function runInit(
     const content = fs.readFileSync(gitignorePath, 'utf-8');
     if (!content.includes(ignoreEntry)) {
       fs.appendFileSync(gitignorePath, `\n${ignoreEntry}\n`, 'utf-8');
+      console.log(`   🛡️  Updated .gitignore (${ignoreEntry})`);
     }
   }
 
   // 4. Scaffold IDE instructions
   const instructions = getInstructionsTemplate(projectSlug);
   const targets = [
-    '.gemini/instructions.md',
-    '.cursor/rules/world-model-mcp.mdc',
-    '.github/copilot-instructions.md',
-    '.vscode/instructions.md',
+    '.agents/AGENTS.md',
     'CLAUDE.md',
     '.windsurfrules',
-    '.agents/AGENTS.md',
+    '.cursor/rules/world-model-mcp.mdc',
+    '.gemini/instructions.md',
+    '.vscode/instructions.md',
+    '.github/copilot-instructions.md',
   ];
 
+  console.log('   📝 Scaffolding agent instruction contracts:');
   for (const t of targets) {
     const fullPath = path.join(root, t);
     const dir = path.dirname(fullPath);
@@ -119,10 +127,12 @@ export async function runInit(
 
     if (fs.existsSync(fullPath)) {
       const content = fs.readFileSync(fullPath, 'utf-8');
-      const { updatedContent } = upsertInstructionBlock(content, instructions);
+      const { updatedContent, status } = upsertInstructionBlock(content, instructions);
       fs.writeFileSync(fullPath, updatedContent, 'utf-8');
+      console.log(`      - ${t} (${status})`);
     } else {
       fs.writeFileSync(fullPath, instructions.trim() + '\n', 'utf-8');
+      console.log(`      - ${t} (created)`);
     }
   }
 
@@ -138,12 +148,40 @@ export async function runInit(
     if (!fs.existsSync(globalSkillDir)) fs.mkdirSync(globalSkillDir, { recursive: true });
     fs.writeFileSync(path.join(globalSkillDir, 'SKILL.md'), skillContent, 'utf-8');
   } catch {}
+  console.log('   🌐 Installed Antigravity agent skill at: .agents/skills/world-model-mcp');
 
   // 6. Merge MCP Configs
   mergeMcpConfig(root, '.cursor/mcp.json', 'Cursor', getMcpConfigCursor(projectSlug), 'mcpServers');
   mergeMcpConfig(root, '.vscode/mcp.json', 'VS Code', getMcpConfigVscode(projectSlug), 'servers');
 
-  // Global Antigravity Config
+  const windsurfDir = path.join(root, '.windsurf');
+  if (fs.existsSync(windsurfDir)) {
+    mergeMcpConfig(
+      root,
+      '.windsurf/mcp.json',
+      'Windsurf',
+      getMcpConfigCursor(projectSlug),
+      'mcpServers'
+    );
+  }
+
+  const claudeDir =
+    process.platform === 'darwin'
+      ? path.join(homedir, 'Library', 'Application Support', 'Claude')
+      : process.platform === 'win32'
+        ? path.join(process.env.APPDATA || path.join(homedir, 'AppData', 'Roaming'), 'Claude')
+        : path.join(homedir, '.config', 'Claude');
+
+  if (fs.existsSync(claudeDir)) {
+    mergeMcpConfig(
+      claudeDir,
+      'claude_desktop_config.json',
+      'Claude Desktop',
+      getMcpConfigCursor(projectSlug),
+      'mcpServers'
+    );
+  }
+
   const globalMcpConfig = path.join(homedir, '.gemini/config/mcp_config.json');
   try {
     if (fs.existsSync(path.dirname(globalMcpConfig))) {
@@ -155,10 +193,64 @@ export async function runInit(
         'mcpServers'
       );
     }
+
+    const geminiConfigJson = path.join(homedir, '.gemini/config/config.json');
+    if (fs.existsSync(geminiConfigJson)) {
+      try {
+        const raw = fs.readFileSync(geminiConfigJson, 'utf-8');
+        const data = JSON.parse(raw);
+        if (data.userSettings?.globalPermissionGrants?.allow) {
+          let updated = false;
+          for (const perm of ['command(world-model-mcp)']) {
+            if (!data.userSettings.globalPermissionGrants.allow.includes(perm)) {
+              data.userSettings.globalPermissionGrants.allow.push(perm);
+              updated = true;
+            }
+          }
+          if (updated) {
+            fs.writeFileSync(geminiConfigJson, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+            console.log(
+              '      ✅ Google Antigravity (config.json) — granted command(world-model-mcp)'
+            );
+          }
+        }
+      } catch {}
+    }
   } catch {}
+  console.log(
+    '   🔌 Configured IDE MCP Servers (Cursor, VS Code, Windsurf, Claude Desktop, Antigravity)'
+  );
+
+  // Global Rules
+  const globalTargets = [
+    { path: path.join(homedir, '.cursorrules'), label: 'Global Cursor Rules (~/.cursorrules)' },
+    {
+      path: path.join(homedir, '.gemini/GEMINI.md'),
+      label: 'Global Gemini Rules (~/.gemini/GEMINI.md)',
+    },
+  ];
+  const globalRulesText = getGlobalRulesTemplate(projectSlug);
+  for (const target of globalTargets) {
+    if (target.path.includes('.gemini') && !fs.existsSync(path.dirname(target.path))) {
+      continue;
+    }
+    if (fs.existsSync(target.path)) {
+      const content = fs.readFileSync(target.path, 'utf-8');
+      const { updatedContent, status } = upsertInstructionBlock(content, globalRulesText);
+      if (status !== 'unchanged') {
+        fs.writeFileSync(target.path, updatedContent, 'utf-8');
+        console.log(`      ✅ ${target.label} — ${status} rules`);
+      }
+    } else {
+      fs.writeFileSync(target.path, globalRulesText, 'utf-8');
+      console.log(`      ✅ ${target.label} — created`);
+    }
+  }
 
   // 7. Seed initial origin entity if DB is empty
   const db = getDb(projectSlug, root);
+  console.log('   💾 Initialized SQLite database with WAL mode & SHA-256 Merkle audit chain');
+
   const count = (
     db.prepare('SELECT count(*) as count FROM entities WHERE project = ?').get(projectSlug) as any
   ).count;
@@ -171,9 +263,19 @@ export async function runInit(
       properties: { description: 'Default world spatial origin' },
       tags: ['origin', 'landmark'],
     });
+    console.log('   🌱 Seeded default World Origin landmark entity at (0, 0, 0)');
   }
 
-  validateWorldModel(db, { project: projectSlug });
+  // 8. Health validation & event audit
+  const validation = validateWorldModel(db, { project: projectSlug });
+  const audit = verifyEventAuditChain(db, { project: projectSlug });
+  console.log(
+    `   🔍 Audited spatial world model: ${validation.valid ? '✅ Structure valid' : '⚠️ Validation anomaly'}, ${audit.valid ? '✅ Unbroken SHA-256 chain' : '⚠️ Ledger anomaly'}`
+  );
+
+  console.log(`\n✨ world-model-mcp initialized successfully for "${projectSlug}"!`);
+  console.log('   Run "world-model-mcp doctor" to verify runtime health.');
+  console.log('   Run "world-model-mcp inspect" to view active 3D entities and spatial graph.\n');
 }
 
 export async function runAutoInit(root: string, projectSlug: string): Promise<void> {

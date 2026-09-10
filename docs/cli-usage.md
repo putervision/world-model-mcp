@@ -12,6 +12,9 @@ Starts the stdio JSON-RPC MCP server for IDEs and agent runners.
 ### `world-model-mcp init [-y|--yes]`
 Scaffolds `.world-model-mcp/` directory, `.gitignore`, `.env`, and IDE rules for Cursor, VS Code, Gemini Antigravity, and Claude.
 
+### `world-model-mcp init-global`
+Re-scaffolds instruction files, rule templates, and agent skills across all registered projects in `~/.world-model-mcp/projects.json`.
+
 ### `world-model-mcp view [-p <project>]`
 Launches the standalone Three.js 3D WebGL Scene Visualizer on `http://127.0.0.1:8090`.
 

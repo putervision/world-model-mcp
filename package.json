@@ -1,6 +1,6 @@
 {
   "name": "@putervision/world-model-mcp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Deterministic, persistent 3D/2D spatial world model for AI agents with entity tracking, object permanence, movement simulation, and expected view frustum projection.",
   "keywords": [
     "mcp",

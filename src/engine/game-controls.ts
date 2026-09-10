@@ -17,12 +17,14 @@ export interface GenerateGameInputsParams {
   control_profile?: Partial<GameControlProfile>;
   camera?: CameraState;
   viewport?: ViewportSize;
-  output_format?: 'playwright_mcp' | 'playwright_script' | 'raw_actions';
+  output_format?:
+    'playwright_mcp' | 'playwright_script' | 'raw_actions' | 'xdotool_script' | 'powershell_script';
 }
 
 export class GameControlsEngine {
   /**
-   * Translates 3D coordinates and navigation waypoints into timed keyboard/mouse inputs and Playwright MCP commands.
+   * Translates 3D coordinates and navigation waypoints into timed keyboard/mouse inputs,
+   * Playwright MCP commands, and native desktop automation scripts (Linux xdotool & Windows PowerShell).
    */
   static generateInputs(params: GenerateGameInputsParams): GameInputSequence {
     const profile: GameControlProfile = {
@@ -58,105 +60,105 @@ export class GameControlsEngine {
     }
 
     if (params.target_position) {
-      const lastPoint = path[path.length - 1];
-      if (vec3Distance(lastPoint, params.target_position) > 0.05) {
+      const last = path[path.length - 1];
+      if (vec3Distance(last, params.target_position) > 0.05) {
         path.push({ ...params.target_position });
       }
     }
 
     const actions: GameInputAction[] = [];
-    let currentYaw = normalizeAngle(params.current_orientation?.yaw || 0);
+    let currentYaw = params.current_orientation?.yaw || 0;
     let totalEstimatedMs = 0;
     let requiresJump = false;
 
     for (let i = 0; i < path.length - 1; i++) {
-      const startPt = path[i];
-      const endPt = path[i + 1];
-      const dist = vec3Distance(startPt, endPt);
+      const p1 = path[i];
+      const p2 = path[i + 1];
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y !== undefined && p1.y !== undefined ? p2.y - p1.y : 0;
+      const dz = p2.z !== undefined && p1.z !== undefined ? p2.z - p1.z : 0;
+      const dist = vec3Distance(p1, p2);
 
       if (dist < 0.05) continue;
 
-      const dx = endPt.x - startPt.x;
-      const dy = endPt.y - startPt.y;
-      const dz = endPt.z - startPt.z;
-
-      // Desired heading angle (+Z is 0 deg, +X is 90 deg)
-      const targetAngleRad = Math.atan2(dx, dz);
-      const targetAngleDeg = normalizeAngle((targetAngleRad * 180) / Math.PI);
-
-      let deltaYaw = targetAngleDeg - currentYaw;
-      if (deltaYaw > 180) deltaYaw -= 360;
-      if (deltaYaw < -180) deltaYaw += 360;
-
-      // 1. Turning Action
-      if (Math.abs(deltaYaw) > 2.0) {
-        if (profile.use_mouse_look) {
-          const deltaX = Math.round(deltaYaw * (profile.mouse_sensitivity || 1.0));
-          actions.push({
-            type: 'mouse_move',
-            delta_x: deltaX,
-            delta_y: 0,
-            description: `Rotate camera yaw by ${deltaYaw > 0 ? '+' : ''}${Math.round(deltaYaw)}°`,
-          });
-          totalEstimatedMs += 50;
-        } else {
-          const turnKey =
-            deltaYaw > 0
-              ? profile.turn_right_key || 'ArrowRight'
-              : profile.turn_left_key || 'ArrowLeft';
-          const turnDurationMs = Math.max(
-            50,
-            Math.round((Math.abs(deltaYaw) / (profile.turn_speed || 90)) * 1000)
-          );
-          actions.push({
-            type: 'key_hold',
-            key: turnKey,
-            duration_ms: turnDurationMs,
-            description: `Turn ${deltaYaw > 0 ? 'right' : 'left'} (${Math.round(deltaYaw)}°) by holding ${turnKey} for ${turnDurationMs}ms`,
-          });
-          totalEstimatedMs += turnDurationMs;
-        }
-        currentYaw = targetAngleDeg;
-      }
-
-      // 2. Jump Action for vertical step changes
-      if (dy > 0.4) {
+      // Check elevation difference for jump requirement
+      if (dy > 0.5 || (dz > 0.5 && p2.y === undefined)) {
         requiresJump = true;
         actions.push({
           type: 'key_press',
           key: profile.jump_key || 'Space',
-          description: `Jump over ${Math.round(dy * 10) / 10}m vertical elevation change`,
+          duration_ms: 100,
+          description: `Jump over elevation step (${Math.round(dy * 10) / 10}m)`,
         });
         totalEstimatedMs += 100;
       }
 
-      // 3. Movement Action
-      if (profile.scheme === 'click_to_move') {
-        let screenX = -1;
-        let screenY = -1;
-        if (params.camera && params.viewport) {
-          const proj = worldToScreen(endPt, params.camera, params.viewport);
-          screenX = proj.screen_x;
-          screenY = proj.screen_y;
+      // Calculate target yaw (horizontal angle on XZ plane: +Z = 0 deg, +X = 90 deg)
+      const targetYaw = Math.atan2(dx, dz) * (180 / Math.PI);
+      let angleDiff = (targetYaw - currentYaw) % 360;
+      if (angleDiff > 180) angleDiff -= 360;
+      if (angleDiff < -180) angleDiff += 360;
+
+      // Turning / Aiming action
+      if (Math.abs(angleDiff) > 5) {
+        const turnDurationMs = Math.round(
+          (Math.abs(angleDiff) / (profile.turn_speed || 90)) * 1000
+        );
+
+        if (profile.use_mouse_look) {
+          const deltaX = Math.round(angleDiff * (profile.mouse_sensitivity || 1.0) * 10);
+          actions.push({
+            type: 'mouse_move',
+            delta_x: deltaX,
+            delta_y: 0,
+            duration_ms: turnDurationMs,
+            description: `Look ${angleDiff > 0 ? 'right' : 'left'} by ${Math.round(Math.abs(angleDiff))}° (deltaX: ${deltaX}px)`,
+          });
+        } else {
+          const turnKey = angleDiff > 0 ? profile.turn_right_key : profile.turn_left_key;
+          actions.push({
+            type: 'key_hold',
+            key: turnKey,
+            duration_ms: turnDurationMs,
+            description: `Turn ${angleDiff > 0 ? 'right' : 'left'} by holding ${turnKey} for ${turnDurationMs}ms`,
+          });
         }
-        const moveTimeMs = Math.max(100, Math.round((dist / (profile.move_speed || 5)) * 1000));
 
-        actions.push({
-          type: 'mouse_click',
-          screen_x: screenX >= 0 ? screenX : undefined,
-          screen_y: screenY >= 0 ? screenY : undefined,
-          description:
-            screenX >= 0
-              ? `Click waypoint at screen (${screenX}, ${screenY})`
-              : `Click ground waypoint at world (${endPt.x.toFixed(1)}, ${endPt.y.toFixed(1)}, ${endPt.z.toFixed(1)})`,
-        });
+        totalEstimatedMs += turnDurationMs;
+        currentYaw = targetYaw;
+      }
 
+      // Translation / Move action
+      if (profile.scheme === 'click_to_move') {
+        let screenCoords: { x: number; y: number } | null = null;
+        if (params.camera && params.viewport) {
+          const projected = worldToScreen(p2, params.camera, params.viewport);
+          if (projected && projected.screen_x >= 0 && projected.screen_y >= 0) {
+            screenCoords = { x: projected.screen_x, y: projected.screen_y };
+          }
+        }
+
+        if (screenCoords) {
+          actions.push({
+            type: 'mouse_click',
+            screen_x: screenCoords.x,
+            screen_y: screenCoords.y,
+            description: `Click at screen coordinates (${screenCoords.x}, ${screenCoords.y}) to move to target`,
+          });
+        } else {
+          actions.push({
+            type: 'mouse_click',
+            description: `Click in game viewport towards position (${p2.x.toFixed(1)}, ${p2.y?.toFixed(1) ?? 0}, ${p2.z?.toFixed(1) ?? 0})`,
+          });
+        }
+        const clickMoveDurationMs = Math.round((dist / (profile.move_speed || 5)) * 1000);
         actions.push({
           type: 'wait',
-          duration_ms: moveTimeMs,
-          description: `Wait ${moveTimeMs}ms for agent to reach target waypoint`,
+          duration_ms: clickMoveDurationMs,
+          description: `Wait ${clickMoveDurationMs}ms while moving to destination`,
         });
-        totalEstimatedMs += moveTimeMs;
+        totalEstimatedMs += clickMoveDurationMs;
       } else {
         // WASD / Arrows
         const forwardKey = profile.forward_key || 'KeyW';
@@ -172,9 +174,11 @@ export class GameControlsEngine {
       }
     }
 
-    // Generate Playwright MCP Commands
+    // Generate Playwright MCP Commands and Native Desktop Scripts
     const playwrightCommands = this.buildPlaywrightCommands(actions);
     const playwrightScript = this.buildPlaywrightScript(actions);
+    const xdotoolScript = this.buildXdotoolScript(actions);
+    const powershellScript = this.buildPowershellScript(actions);
 
     return {
       actions,
@@ -182,6 +186,8 @@ export class GameControlsEngine {
       estimated_duration_ms: totalEstimatedMs,
       requires_jump: requiresJump,
       playwright_script: playwrightScript,
+      xdotool_script: xdotoolScript,
+      powershell_script: powershellScript,
     };
   }
 
@@ -303,5 +309,98 @@ export async function executeGameNavigation(page: Page): Promise<void> {
 ${lines.join('\n')}
 }
 `;
+  }
+
+  /**
+   * Generates a Linux native desktop automation bash script using xdotool.
+   */
+  private static buildXdotoolScript(actions: GameInputAction[]): string {
+    const lines: string[] = [
+      '#!/bin/bash',
+      '# PuterVision Native Desktop Input Sequence (Linux xdotool)',
+    ];
+    for (const act of actions) {
+      if (act.type === 'key_hold' && act.key) {
+        const keySym = this.mapToXdotoolKey(act.key);
+        const sec = ((act.duration_ms || 100) / 1000).toFixed(3);
+        lines.push(`# ${act.description}`);
+        lines.push(`xdotool keydown ${keySym}`);
+        lines.push(`sleep ${sec}`);
+        lines.push(`xdotool keyup ${keySym}`);
+      } else if (act.type === 'key_press' && act.key) {
+        const keySym = this.mapToXdotoolKey(act.key);
+        lines.push(`# ${act.description}`);
+        lines.push(`xdotool key ${keySym}`);
+      } else if (act.type === 'mouse_move' && act.delta_x !== undefined) {
+        lines.push(`# ${act.description}`);
+        lines.push(`xdotool mousemove_relative -- ${act.delta_x} ${act.delta_y || 0}`);
+      } else if (act.type === 'mouse_click') {
+        lines.push(`# ${act.description}`);
+        if (act.screen_x !== undefined && act.screen_y !== undefined) {
+          lines.push(`xdotool mousemove ${act.screen_x} ${act.screen_y} click 1`);
+        } else {
+          lines.push(`xdotool click 1`);
+        }
+      } else if (act.type === 'wait' && act.duration_ms) {
+        const sec = (act.duration_ms / 1000).toFixed(3);
+        lines.push(`sleep ${sec}`);
+      }
+    }
+    return lines.join('\n') + '\n';
+  }
+
+  /**
+   * Generates a Windows native desktop automation script using PowerShell SendKeys.
+   */
+  private static buildPowershellScript(actions: GameInputAction[]): string {
+    const lines: string[] = [
+      '# PuterVision Native Desktop Input Sequence (Windows PowerShell)',
+      'Add-Type -AssemblyName System.Windows.Forms',
+    ];
+    for (const act of actions) {
+      if (act.type === 'key_hold' && act.key) {
+        const keyStr = this.mapToSendKeys(act.key);
+        lines.push(`# ${act.description}`);
+        lines.push(`[System.Windows.Forms.SendKeys]::SendWait("${keyStr}")`);
+        lines.push(`Start-Sleep -Milliseconds ${act.duration_ms || 100}`);
+      } else if (act.type === 'key_press' && act.key) {
+        const keyStr = this.mapToSendKeys(act.key);
+        lines.push(`# ${act.description}`);
+        lines.push(`[System.Windows.Forms.SendKeys]::SendWait("${keyStr}")`);
+      } else if (act.type === 'wait' && act.duration_ms) {
+        lines.push(`Start-Sleep -Milliseconds ${act.duration_ms}`);
+      }
+    }
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  private static mapToXdotoolKey(key: string): string {
+    const map: Record<string, string> = {
+      KeyW: 'w',
+      KeyA: 'a',
+      KeyS: 's',
+      KeyD: 'd',
+      ArrowUp: 'Up',
+      ArrowDown: 'Down',
+      ArrowLeft: 'Left',
+      ArrowRight: 'Right',
+      Space: 'space',
+    };
+    return map[key] || key.toLowerCase();
+  }
+
+  private static mapToSendKeys(key: string): string {
+    const map: Record<string, string> = {
+      KeyW: 'w',
+      KeyA: 'a',
+      KeyS: 's',
+      KeyD: 'd',
+      ArrowUp: '{UP}',
+      ArrowDown: '{DOWN}',
+      ArrowLeft: '{LEFT}',
+      ArrowRight: '{RIGHT}',
+      Space: ' ',
+    };
+    return map[key] || key.toLowerCase();
   }
 }

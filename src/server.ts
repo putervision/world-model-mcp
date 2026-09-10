@@ -241,6 +241,33 @@ server.registerResource(
   }
 );
 
+server.registerResource(
+  "world-health",
+  "world:///health",
+  {
+    title: "World Model Server Health",
+    description: "Server health status, version, and timestamp",
+    mimeType: "application/json",
+  },
+  async (uri: URL) => {
+    const project = getProjectSlug();
+    return {
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: "application/json",
+          text: JSON.stringify({
+            status: "healthy",
+            version: VERSION,
+            project_slug: project,
+            timestamp: new Date().toISOString(),
+          }, null, 2),
+        },
+      ],
+    };
+  }
+);
+
 // Register Tools & Prompts
 registerAllTools(server);
 registerAllPrompts(server);

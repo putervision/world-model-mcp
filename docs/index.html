@@ -174,8 +174,8 @@
 
     .triad-box {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
       margin: 2rem 0;
     }
 
@@ -342,7 +342,7 @@
       <ul class="nav-links">
         <li><a href="#radar">Spatial Radar</a></li>
         <li><a href="#simulation">Movement & Nav</a></li>
-        <li><a href="#triad">PuterVision Triad</a></li>
+        <li><a href="#pentad">PuterVision Pentad</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#tools">15 MCP Tools</a></li>
         <li><a href="#quickstart">Quickstart</a></li>
@@ -359,7 +359,7 @@
   <main class="container">
     <!-- Hero Section -->
     <section class="hero">
-      <span class="badge">RELEASE v0.3.0 • LOCAL-FIRST SQLITE WAL • 15 CONSOLIDATED MCP TOOLS</span>
+      <span class="badge">RELEASE v0.3.1 • LOCAL-FIRST SQLITE WAL • 15 CONSOLIDATED MCP TOOLS</span>
       <h1>Deterministic 3D/2D Spatial World Model for AI Agents</h1>
       <p>Bridges perception and action with persistent entity tracking, topological spatial relationships, object permanence with confidence decay, movement simulation, spatial SDD, and Playwright 3D game navigation.</p>
 
@@ -373,11 +373,11 @@
 
 
 
-    <!-- PuterVision Triad Section -->
-    <section id="triad" class="card">
-      <h2>The PuterVision Autonomous Agent Memory Triad</h2>
+    <!-- PuterVision Pentad Section -->
+    <section id="pentad" class="card">
+      <h2>The PuterVision Autonomous Pentad Ecosystem</h2>
       <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-        <code>world-model-mcp</code> operates as the durable spatial foundation linking raw sensory perception with structured workflow execution.
+        <code>world-model-mcp</code> operates as the durable spatial foundation linking raw sensory perception, workflow execution, cognitive reasoning, and high-frequency behavior execution.
       </p>
 
       <div class="triad-box">
@@ -398,10 +398,26 @@
         </div>
 
         <div class="triad-card">
-          <h4><span>🧠</span> Reasoning & Workflow</h4>
+          <h4><span>🧠</span> Workflow Memory</h4>
           <strong style="color: var(--accent-purple);">state-memory-mcp</strong>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
             Task execution DAGs, decisions, blockers, SDD design contracts, milestone verification, and multimodal trajectory audit trail.
+          </p>
+        </div>
+
+        <div class="triad-card">
+          <h4><span>🎯</span> Strategic Reasoning</h4>
+          <strong style="color: #38bdf8;">agent-reasoning-mcp</strong>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            Hierarchical BDI goal decomposition, multi-attribute utility scoring, exponential belief decay, and reactive replanning.
+          </p>
+        </div>
+
+        <div class="triad-card">
+          <h4><span>⚡</span> Behavior Runtime</h4>
+          <strong style="color: #10b981;">behavior-mcp</strong>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
+            High-frequency ~60Hz in-browser behavior tree execution, reactive preemption triggers, telemetry, and 5-layer safety guardrails.
           </p>
         </div>
       </div>

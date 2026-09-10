@@ -78,7 +78,7 @@ To allow cache query and ingestion commands to run automatically without prompti
 <!-- world-model-mcp:start -->
 ## Spatial World Model (world-model-mcp)
 
-This project uses `world-model-mcp` with project slug "${projectSlug}` to maintain a persistent 3D/2D spatial internal world model, entity tracking, object permanence, and movement simulation.
+This project uses `world-model-mcp` with project slug "world-model-mcp" to maintain a persistent 3D/2D spatial internal world model, entity tracking, object permanence, and movement simulation.
 
 ### 1. Mandatory Workflow & Priority
 1. **Orient & Explore**: Call `get_spatial_map(format: 'summary')` and `get_expected_view` at the start of spatial or simulated tasks.
@@ -108,3 +108,89 @@ This project uses `world-model-mcp` with project slug "${projectSlug}` to mainta
 * `generate_game_inputs`: Generate Playwright MCP automation inputs or project/unproject 3D coordinates and screen pixels.
 * `wait_for_spatial_state`: Poll and wait until an entity reaches a specific spatial condition.
 <!-- world-model-mcp:end -->
+
+<!-- behavior-mcp:start -->
+# Behavior Runtime Engine (behavior-mcp)
+
+This project uses `behavior-mcp` with project slug "world-model-mcp" to execute deterministic behavior trees at ~60Hz in browser runtimes with reactive triggers and safety guardrails.
+
+## Mandatory Runtime Workflow
+1. **Load Behavior**: Call `load_behavior(action: "load", behavior_name: "...")` to activate execution.
+2. **Monitor Execution**: Check `get_status(action: "current")` and inspect active node traversal paths.
+3. **Reactive Triggers**: Register high-priority emergency interrupts via `register_trigger(action: "register", ...)`.
+4. **Safety & Abort**: Call `abort_behavior(action: "abort")` to immediately halt execution if anomalous behavior occurs.
+
+## 10 Core MCP Tools
+- `load_behavior`: Inject and start behavior tree execution.
+- `set_parameters`: Update execution parameters on the fly.
+- `get_status`: Query active status, current node path, and tick counters.
+- `abort_behavior`: Immediately halt, pause, or resume execution.
+- `register_trigger`: Configure priority interrupts with cooldown guards.
+- `replay_recording`: Capture and replay deterministic frame actions.
+- `get_metrics`: Query execution telemetry and duration statistics.
+- `manage_behaviors`: Register and version behavior tree definitions with SHA-256 tree hashes.
+- `manage_blackboard`: Read and write behavior tree blackboard state variables.
+- `manage_runtime_db`: Database maintenance, diagnostics, and SHA-256 Merkle audit verification.
+<!-- behavior-mcp:end -->
+
+<!-- agent-reasoning-mcp:start -->
+# Strategic Agent Reasoning (agent-reasoning-mcp)
+
+This project uses `agent-reasoning-mcp` with project slug "world-model-mcp" to manage goals, decompose complex tasks, evaluate situational trade-offs, and track decision rationale.
+
+## Mandatory Reasoning Workflow
+1. **Start of planning**: Call `set_goal(action: "create", title: "...")` to establish high-level objectives.
+2. **Decomposition**: Call `set_goal(action: "decompose", parent_id: "...", subgoals: [...])` to break down into actionable steps.
+3. **Situational Trade-offs**: Call `evaluate_situation(action: "snapshot", snapshot: {...})` before selecting high-stakes actions.
+4. **Utility Configuration**: Tune agent priorities with `set_utility_weights(action: "configure", weights: {...})`.
+5. **Intention Dispatch**: Create execution directives with `manage_intentions(action: "create", ...)` for the runtime engine.
+6. **Reactive Replanning**: If an unexpected blocker occurs, invoke `replan(action: "blocker", goal_id: "...", blocker_description: "...")`.
+
+## 10 Core MCP Tools
+- `set_goal`: Manage goal hierarchy and task DAGs.
+- `evaluate_situation`: Score and rank candidate actions from environment snapshots.
+- `replan`: Adaptively reconstruct subgoals upon obstacles.
+- `assess_risk`: Quantitative threat and risk calculation.
+- `query_knowledge`: Search heuristics and past decision patterns.
+- `set_utility_weights`: Configure utility weights (aggression, caution, greed, exploration).
+- `get_decision_trace`: Explainable chain-of-thought rationale playback.
+- `manage_beliefs`: Structured belief state with exponential confidence decay.
+- `manage_intentions`: Wire contract directives queue for runtime execution.
+- `manage_reasoning_db`: Snapshots, diagnostics, and SHA-256 Merkle audit verification.
+<!-- agent-reasoning-mcp:end -->
+
+## State Memory (state-memory-mcp)
+
+This project tracks workflow state, tasks, design decisions, and blockers using `state-memory-mcp` with project slug `"world-model-mcp"`.
+
+### 1. Priority Order
+Before doing any coding or investigation:
+1. `manage_sessions(action: "start")` — Start a tracking session for full change attribution.
+2. `get_analytics(action: "summary")` — Run to understand current project state, active branches, and overall progress.
+3. `manage_tasks(action: "next")` — Query prioritized runnable tasks.
+4. `manage_tasks(action: "find_blockers")` — Identify any active blockers preventing progress.
+5. `manage_nodes(action: "list")` — Find pending tasks, past decisions, or milestones.
+6. `query_graph(action: "trace")` — Trace what depends on or blocks a task.
+
+### 2. When to Write to the Graph
+You MUST update the graph as you work:
+- **Starting a session**: Always call `manage_sessions(action: "start", agent_id: "my-agent")` to track all mutations under a unique session.
+- **Starting a new task**: Create a node with `manage_nodes(action: "create", type: "task", title: "...", session_id: session_id)`.
+- **Making a design or implementation decision**: Document it with `manage_nodes(action: "create", type: "decision", title: "...", metadata: { "rationale": "..." }, session_id: session_id)`.
+- **Encountering a blocker**: Record the blocker with `manage_nodes(action: "create", type: "blocker", title: "...", session_id: session_id)` and connect it using `manage_edges(action: "add", type: "blocks", source_id: blocker_id, target_id: task_id, session_id: session_id)`.
+- **Adding observation notes**: Atomically log notes using `manage_nodes(action: "add_note", text: "...", attach_to: node_id)`.
+- **Batch updates**: Bulk update tasks/nodes using `manage_nodes(action: "batch_update", ids: ["..."], status: "done")`.
+- **Completing a task**: Update status to done using `manage_tasks(action: "complete", task_id: task_id)` or `manage_nodes(action: "update", id: task_id, status: "done")`.
+- **Creating/generating a new file**: Create an artifact node with `manage_nodes(action: "create", type: "artifact", title: "...", session_id: session_id)` and connect it using `manage_edges(action: "add", type: "produces", source_id: task_id, target_id: artifact_id)`.
+
+### 3. Workflow Pattern
+1. **Start of session**: Call `manage_sessions(action: "start")` to align and track work, then run `get_analytics(action: "summary")`, `manage_tasks(action: "next")`, and `manage_tasks(action: "find_blockers")`.
+2. **Task decomposition**: Decompose user requests into tasks and add them to the graph.
+3. **Execution**: Mark tasks as "in_progress", document design decisions as they occur, and log blockers if you hit any obstacles.
+4. **Validation & Resolution**: Run `run_diagnostics(action: "validate")` to ensure no cycles/orphans/contradictions, mark tasks as "done", document completed artifacts, and resolve blockers. Call `manage_sessions(action: "end")` to finalize.
+
+### 4. Codebase Seeding on Initialization
+If the project was just initialized or is missing high-level structure (Plans, Milestones, Decisions):
+1. **Inspect the Codebase**: Read the README and core files to understand the roadmap and architecture.
+2. **Scaffold the Roadmap**: Create a `plan` node (e.g., "Project Roadmap") and add `milestone` nodes representing key target phases, connecting them using `part_of` edges.
+3. **Scaffold Architecture**: Create `decision` nodes representing core technical choices (e.g., choice of databases, frameworks) and link them to the milestones/tasks using `decided_in` edges.

@@ -2,6 +2,13 @@
 
 All notable changes to `@putervision/world-model-mcp` will be documented in this file.
 
+## [0.3.1] - 2026-08-30
+
+### 🚀 Autonomous Gaming Suite & Script Generation
+- Added native desktop input automation (`xdotool_script` for Linux X11/Steam, `powershell_script` for Windows).
+- Added `VisionBridge.ingestGameTelemetry` for direct game engine telemetry ingestion into 3D world model entities.
+- Enhanced shortest-turn angle calculation and click-to-move timing.
+
 ## [0.3.0] - 2026-08-21
 
 ### Changed

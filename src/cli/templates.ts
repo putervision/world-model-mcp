@@ -3,7 +3,7 @@ export function getInstructionsTemplate(projectSlug: string): string {
 <!-- world-model-mcp:start -->
 ## Spatial World Model (world-model-mcp)
 
-This project uses \`world-model-mcp\` with project slug "\${projectSlug}\` to maintain a persistent 3D/2D spatial internal world model, entity tracking, object permanence, and movement simulation.
+This project uses \`world-model-mcp\` with project slug "${projectSlug}" to maintain a persistent 3D/2D spatial internal world model, entity tracking, object permanence, and movement simulation.
 
 ### 1. Mandatory Workflow & Priority
 1. **Orient & Explore**: Call \`get_spatial_map(format: 'summary')\` and \`get_expected_view\` at the start of spatial or simulated tasks.
@@ -148,7 +148,7 @@ export function getAgentsMdTemplate(projectSlug: string): string {
 <!-- world-model-mcp:start -->
 # Spatial World Model (world-model-mcp)
 
-This project uses \`world-model-mcp\` with project slug "\${projectSlug}\` to track entities, 3D/2D coordinates, spatial topology, and object permanence.
+This project uses \`world-model-mcp\` with project slug "${projectSlug}" to track entities, 3D/2D coordinates, spatial topology, and object permanence.
 ALWAYS update and query the world model when interacting with spatial or environmental state.
 
 ## Mandatory Workflow

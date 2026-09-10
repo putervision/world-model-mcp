@@ -34,6 +34,24 @@
         "webcrypt",
         "mcp"
       ]
+    },
+    "behavior-mcp": {
+      "command": "behavior-mcp",
+      "args": [
+        "run"
+      ],
+      "env": {
+        "BEHAVIOR_PROJECT": "world-model-mcp"
+      }
+    },
+    "agent-reasoning-mcp": {
+      "command": "agent-reasoning-mcp",
+      "args": [
+        "run"
+      ],
+      "env": {
+        "REASONING_PROJECT": "world-model-mcp"
+      }
     }
   }
 }
