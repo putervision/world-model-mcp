@@ -7,19 +7,49 @@
   <meta name="description" content="Persistent internal spatial world model for AI agents. Maintains structured representations of entities, spatial relationships, object permanence, movement simulation, and expected view frustum projection.">
   <meta name="keywords" content="world-model, spatial-memory, mcp, model-context-protocol, ai-agents, object-permanence, 3d-spatial, simulation, cursor, claude-code, putervision">
   <meta name="author" content="PuterVision">
+  <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#0b0f19">
+  <link rel="canonical" href="https://worldmodelmcp.com/">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="@putervision/world-model-mcp — Spatial World Model MCP Server">
   <meta property="og:description" content="Durable 3D/2D entity tracking, spatial relations, object permanence, and movement simulation for AI agents.">
-  <meta property="og:url" content="https://github.com/putervision/world-model-mcp">
+  <meta property="og:url" content="https://worldmodelmcp.com/">
+  <meta property="og:image" content="putervision-icon.png">
+  <meta property="og:site_name" content="PuterVision">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://worldmodelmcp.com/">
+  <meta name="twitter:title" content="@putervision/world-model-mcp — Spatial World Model MCP Server">
+  <meta name="twitter:description" content="Durable 3D/2D entity tracking, spatial relations, object permanence, and movement simulation for AI agents.">
+  <meta name="twitter:image" content="putervision-icon.png">
 
   <!-- Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "world-model-mcp",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Cross-platform",
+    "offers": { "@type": "Offer", "price": "0" },
+    "description": "Persistent internal spatial world model for AI agents — durable 3D/2D entity tracking, topological relations, and movement simulation.",
+    "url": "https://worldmodelmcp.com/",
+    "author": {
+      "@type": "Organization",
+      "name": "PuterVision",
+      "url": "https://putervision.com"
+    }
+  }
+  </script>
 
   <style>
     /* Custom Radar & Playground Styles */
@@ -36,8 +66,14 @@
 
     @media (max-width: 900px) {
       .radar-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
       }
+    }
+
+    .radar-container > *,
+    .sim-arena-container > * {
+      min-width: 0;
+      max-width: 100%;
     }
 
     .canvas-wrap {
@@ -49,11 +85,14 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 380px;
+      min-height: 280px;
+      min-width: 0;
+      max-width: 100%;
     }
 
     canvas#radarCanvas, canvas#simCanvas {
       width: 100%;
+      max-width: 100%;
       height: 380px;
       display: block;
       cursor: crosshair;
@@ -72,7 +111,30 @@
 
     @media (max-width: 900px) {
       .sim-arena-container {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .sim-controls,
+    .radar-controls {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .code-box, pre, code {
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        padding: 1.5rem 1rem !important;
+      }
+      .radar-container, .sim-arena-container {
+        padding: 1rem 0.75rem;
+      }
+      canvas#radarCanvas, canvas#simCanvas {
+        height: 280px;
       }
     }
 
@@ -260,6 +322,7 @@
 
     .tab-header {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5rem;
       border-bottom: 1px solid var(--border-color);
       margin-bottom: 1rem;
@@ -381,13 +444,13 @@
       </p>
 
       <div class="triad-box">
-        <div class="triad-card">
+        <a href="https://visionmemorymcp.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit;" class="triad-card">
           <h4><span>👁️</span> Perception Layer</h4>
-          <strong style="color: var(--accent-cyan);">vision-memory-mcp</strong>
+          <strong style="color: var(--accent-cyan);">vision-memory-mcp ↗</strong>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
             Visual state cache, layout grounding, AX tree coordinate mappings, diff detection, and video timeline keyframes.
           </p>
-        </div>
+        </a>
 
         <div class="triad-card active-hub">
           <h4><span>🌐</span> Spatial World Model</h4>
@@ -397,29 +460,29 @@
           </p>
         </div>
 
-        <div class="triad-card">
+        <a href="https://statememorymcp.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit;" class="triad-card">
           <h4><span>🧠</span> Workflow Memory</h4>
-          <strong style="color: var(--accent-purple);">state-memory-mcp</strong>
+          <strong style="color: var(--accent-purple);">state-memory-mcp ↗</strong>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
             Task execution DAGs, decisions, blockers, SDD design contracts, milestone verification, and multimodal trajectory audit trail.
           </p>
-        </div>
+        </a>
 
-        <div class="triad-card">
+        <a href="https://agentreasoningmcp.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit;" class="triad-card">
           <h4><span>🎯</span> Strategic Reasoning</h4>
-          <strong style="color: #38bdf8;">agent-reasoning-mcp</strong>
+          <strong style="color: #38bdf8;">agent-reasoning-mcp ↗</strong>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
             Hierarchical BDI goal decomposition, multi-attribute utility scoring, exponential belief decay, and reactive replanning.
           </p>
-        </div>
+        </a>
 
-        <div class="triad-card">
+        <a href="https://behaviormcp.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: inherit;" class="triad-card">
           <h4><span>⚡</span> Behavior Runtime</h4>
-          <strong style="color: #10b981;">behavior-mcp</strong>
+          <strong style="color: #10b981;">behavior-mcp ↗</strong>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
             High-frequency ~60Hz in-browser behavior tree execution, reactive preemption triggers, telemetry, and 5-layer safety guardrails.
           </p>
-        </div>
+        </a>
       </div>
     </section>
 
@@ -819,12 +882,19 @@ console.log("Visible Entities:", expected.visible_entities);</code></pre>
     </section>
   </main>
 
-  <footer style="border-top: 1px solid var(--glass-border); padding: 2rem; margin-top: 4rem; text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
-    <p>
-      <strong>@putervision/world-model-mcp</strong> — An open-source component of the <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: none;">PuterVision</a> AI Agent Architecture.
+  <footer>
+    <p>&copy; 2025-2026 <a href="https://putervision.com" target="_blank" rel="noopener noreferrer" style="color: var(--accent-cyan); text-decoration: none;">PuterVision</a>. Direct inquiries to <a href="mailto:contact@putervision.com" style="color: var(--accent-cyan); text-decoration: none;">contact@putervision.com</a>.</p>
+    <p style="font-size: 0.78rem; margin-top: 0.75rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.4; color: var(--text-secondary);">
+      <strong>Local Privacy & Data Protection Guarantee:</strong> world-model-mcp runs 100% locally on your machine. All entity coordinate stores, spatial relation graphs, AABB collision boundaries, and camera frustum simulations are stored locally in your workspace's <code>.world-model-mcp/world.db</code> SQLite database. No telemetry, 3D coordinates, or workspace logs are ever transmitted or collected by PuterVision.
     </p>
-    <p style="margin-top: 0.5rem;">
-      Released under the <a href="https://opensource.org/licenses/MIT" style="color: var(--text-secondary);">MIT License</a>.
+    <p style="font-size: 0.75rem; margin-top: 0.5rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.4; color: var(--text-secondary);">
+      <strong>Third-Party AI Model API Fees:</strong> world-model-mcp is an open-source MCP server released under the MIT License. Interfacing with AI models (such as Anthropic Claude, OpenAI GPT-4o, xAI Grok, or Google Gemini) via coding clients may incur API usage fees billed directly by those respective providers. PuterVision is not responsible for third-party API token billing.
+    </p>
+    <p style="font-size: 0.75rem; margin-top: 0.5rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.4; color: var(--text-secondary);">
+      <strong>Disclaimer:</strong> This software is provided "as is", without warranty of any kind, express or implied. Under no circumstances shall PuterVision or contributors be liable for any database corruption, simulation discrepancies, execution errors, or damages resulting from actions executed by autonomous agents using spatial models. Always verify spatial trajectories before critical robotic or automation maneuvers.
+    </p>
+    <p style="font-size: 0.7rem; margin-top: 0.5rem; max-width: 800px; margin-left: auto; margin-right: auto; line-height: 1.4; color: var(--text-secondary);">
+      * All product names, trademarks, logos, and brands (such as Cursor, Claude, OpenAI, Gemini, Windsurf, Playwright, GitHub, and SQLite) are property of their respective owners. Reference to third-party technologies is for compatibility identification only and does not imply endorsement, sponsorship, or affiliation.
     </p>
   </footer>
 
