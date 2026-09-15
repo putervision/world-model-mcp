@@ -145,7 +145,9 @@ export class GoalBridge {
         (e) => !goalTargets.some((g) => g.id === e.id) && e.type !== 'obstacle'
       );
       obstacles = proximityList.filter(
-        (e) => e.type === 'obstacle' || e.properties.is_solid === true
+        (e) =>
+          e.properties?.is_passable !== true &&
+          (e.type === 'obstacle' || e.properties?.is_solid === true)
       );
     } else {
       nearby = EntityStore.listEntities(db, { project: params.project, limit: max });

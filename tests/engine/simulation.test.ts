@@ -65,4 +65,34 @@ describe('SimulationEngine', () => {
     expect(res.collisions_detected.length).toBeGreaterThan(0);
     expect(res.collisions_detected[0].obstacle_name).toBe('Brick Wall');
   });
+
+  it('ignores passable obstacles even if type is obstacle or marked is_solid', () => {
+    const db = getDb(PROJECT);
+    const agent = EntityStore.addEntity(db, {
+      project: PROJECT,
+      name: 'Rover',
+      type: 'agent',
+      position: { x: 0, y: 0, z: 0 },
+      bounding_box: { width: 1, height: 1, depth: 1 },
+    });
+
+    EntityStore.addEntity(db, {
+      project: PROJECT,
+      name: 'Open Archway',
+      type: 'obstacle',
+      position: { x: 0, y: 0, z: 5 },
+      bounding_box: { width: 2, height: 2, depth: 2 },
+      properties: { is_passable: true, is_solid: true },
+    });
+
+    const res = SimulationEngine.simulateMovement(db, {
+      project: PROJECT,
+      entity_id: agent.id,
+      delta_position: { x: 0, y: 0, z: 10 },
+      check_collisions: true,
+    });
+
+    expect(res.is_valid).toBe(true);
+    expect(res.collisions_detected.length).toBe(0);
+  });
 });

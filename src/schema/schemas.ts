@@ -1,13 +1,16 @@
 import { ValidationError } from '../utils/errors.js';
 
-export interface ParseResult<T> {
-  success: boolean;
-  data?: T;
-  error?: {
-    errors: { message: string }[];
-    format: () => string;
-  };
-}
+export type ParseResult<T> =
+  | { success: true; data: T; error?: never }
+  | {
+      success: false;
+      data?: never;
+      error: {
+        message: string;
+        errors: { message: string }[];
+        format: () => string;
+      };
+    };
 
 export abstract class Schema<T> {
   isOptional = false;
@@ -44,11 +47,13 @@ export abstract class Schema<T> {
       const data = this.parse(val);
       return { success: true, data };
     } catch (err: any) {
+      const msg = err.message || 'Validation error';
       return {
         success: false,
         error: {
-          errors: [{ message: err.message || 'Validation error' }],
-          format: () => err.message || 'Validation error',
+          message: msg,
+          errors: [{ message: msg }],
+          format: () => msg,
         },
       };
     }
@@ -222,6 +227,10 @@ export class ObjectSchema<T extends Record<string, any>> extends Schema<T> {
     if (this.descriptionText) schema.description = this.descriptionText;
     return schema;
   }
+
+  passthrough(): this {
+    return this;
+  }
 }
 
 export class AnySchema extends Schema<any> {
@@ -245,6 +254,7 @@ export const z = {
   object: <T extends Record<string, any>>(shape: { [K in keyof T]: Schema<T[K]> }) =>
     new ObjectSchema(shape),
   any: () => new AnySchema(),
+  unknown: () => new AnySchema(),
 };
 
 // Enums

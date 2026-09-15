@@ -11,7 +11,7 @@ import {
 import { ValidationError } from '../utils/errors.js';
 
 export interface MovementSimulationResult {
-  entity_id: string;
+  entity_id?: string;
   initial_position: Vector3D;
   projected_position: Vector3D;
   distance_traversed: number;
@@ -29,7 +29,8 @@ export class SimulationEngine {
     db: Database.Database,
     params: {
       project: string;
-      entity_id: string;
+      entity_id?: string;
+      start_position?: Vector3D;
       delta_position?: Vector3D;
       velocity?: Vector3D;
       duration_seconds?: number;
@@ -37,12 +38,26 @@ export class SimulationEngine {
       check_collisions?: boolean;
     }
   ): MovementSimulationResult {
-    const entity = EntityStore.getEntity(db, { project: params.project, id: params.entity_id });
-    if (!entity) {
-      throw new ValidationError(`Entity "${params.entity_id}" does not exist.`);
+    let startPos: Vector3D = { x: 0, y: 0, z: 0 };
+    let entitySize = { width: 1, height: 1, depth: 1 };
+
+    if (params.entity_id) {
+      const entity = EntityStore.getEntity(db, { project: params.project, id: params.entity_id });
+      if (!entity) {
+        throw new ValidationError(`Entity "${params.entity_id}" does not exist.`);
+      }
+      startPos = entity.position || { x: 0, y: 0, z: 0 };
+      if (entity.bounding_box) {
+        entitySize = entity.bounding_box;
+      }
+    } else if (params.start_position) {
+      startPos = { ...params.start_position };
+    } else if (!params.target_position && !params.delta_position && !params.velocity) {
+      throw new ValidationError(
+        'Either entity_id, start_position, delta_position, or target_position must be provided for simulate_movement.'
+      );
     }
 
-    const startPos = entity.position || { x: 0, y: 0, z: 0 };
     let endPos = { ...startPos };
 
     if (params.target_position) {
@@ -82,10 +97,10 @@ export class SimulationEngine {
         limit: 200,
       }).filter(
         (e) =>
-          e.id !== params.entity_id && (e.type === 'obstacle' || e.properties?.is_solid === true)
+          (!params.entity_id || e.id !== params.entity_id) &&
+          e.properties?.is_passable !== true &&
+          (e.type === 'obstacle' || e.properties?.is_solid === true)
       );
-
-      const entitySize = entity.bounding_box || { width: 1, height: 1, depth: 1 };
 
       for (const pt of waypoints) {
         const entityBox = aabbFromCenterSize(pt, entitySize);

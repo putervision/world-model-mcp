@@ -70,4 +70,68 @@ describe('SpatialBlackboard (Multi-Agent Coordination)', () => {
     });
     expect(claim3.success).toBe(true);
   });
+
+  it('should support canonical verbs: set, get, delete, lease, list', () => {
+    // 1. set & get
+    const setRes = SpatialBlackboard.set(db, {
+      project,
+      topic: 'pentad:spatial_intent',
+      sender: 'agent_gamma',
+      payload: { position: { x: 10, y: 0, z: 10 } },
+    });
+    expect(setRes.item.id).toBeDefined();
+
+    const getById = SpatialBlackboard.get(db, { project, id: setRes.item.id });
+    expect(getById).toBeDefined();
+    expect((getById as any).topic).toBe('pentad:spatial_intent');
+
+    const getByTopic = SpatialBlackboard.get(db, { project, topic: 'pentad:spatial_intent' });
+    expect(Array.isArray(getByTopic)).toBe(true);
+    expect((getByTopic as any[]).length).toBe(1);
+
+    // 2. list
+    SpatialBlackboard.set(db, {
+      project,
+      topic: 'pentad:waypoints',
+      sender: 'agent_delta',
+      payload: { waypoints: [] },
+    });
+    const listRes = SpatialBlackboard.list(db, { project });
+    expect(listRes.topics).toContain('pentad:spatial_intent');
+    expect(listRes.topics).toContain('pentad:waypoints');
+    expect(listRes.count).toBe(2);
+
+    // 3. lease
+    const leaseRes1 = SpatialBlackboard.lease(db, {
+      project,
+      resource_id: 'airlock_01',
+      agent_id: 'agent_gamma',
+      duration_seconds: 45,
+      mode: 'acquire',
+    });
+    expect(leaseRes1.success).toBe(true);
+
+    const leaseResConflict = SpatialBlackboard.lease(db, {
+      project,
+      resource_id: 'airlock_01',
+      agent_id: 'agent_delta',
+      duration_seconds: 45,
+      mode: 'acquire',
+    });
+    expect(leaseResConflict.success).toBe(false);
+
+    const leaseResRelease = SpatialBlackboard.lease(db, {
+      project,
+      resource_id: 'airlock_01',
+      agent_id: 'agent_gamma',
+      mode: 'release',
+    });
+    expect(leaseResRelease.success).toBe(true);
+
+    // 4. delete
+    const delRes = SpatialBlackboard.delete(db, { project, id: setRes.item.id });
+    expect(delRes.success).toBe(true);
+    expect(delRes.deleted_count).toBe(1);
+    expect(SpatialBlackboard.get(db, { project, id: setRes.item.id })).toBeNull();
+  });
 });

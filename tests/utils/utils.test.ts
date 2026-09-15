@@ -49,7 +49,7 @@ describe('Utility Modules', () => {
     });
 
     it('exports version string', () => {
-      expect(VERSION).toBe('0.3.1');
+      expect(VERSION).toBe('0.4.0');
     });
   });
 

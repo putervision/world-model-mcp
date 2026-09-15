@@ -1,5 +1,4 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
+import { McpError, ErrorCode } from '../transport/native-mcp.js';
 import { toolDefinitions, READ_ONLY_TOOLS, DESTRUCTIVE_ACTIONS } from './definitions.js';
 import { getDb, getReadOnlyDb, getProjectSlug } from '../engine/db.js';
 import { EntityStore } from '../engine/entity-store.js';
@@ -21,6 +20,7 @@ import { waitForSpatialState } from '../engine/polling.js';
 import { SchemaAdvisor } from '../engine/advisor.js';
 import { worldToScreen, screenToWorldRay } from '../utils/projection.js';
 import { GameControlsEngine } from '../engine/game-controls.js';
+import { z, Schema, ObjectSchema } from '../schema/schemas.js';
 
 interface JsonSchemaProperty {
   type?: string;
@@ -32,7 +32,7 @@ interface JsonSchemaProperty {
   [key: string]: unknown;
 }
 
-export function jsonSchemaToZod(schema: JsonSchemaProperty | unknown): z.ZodTypeAny {
+export function jsonSchemaToZod(schema: JsonSchemaProperty | unknown): Schema<any> {
   if (!schema || typeof schema !== 'object') {
     return z.unknown();
   }
@@ -63,7 +63,7 @@ export function jsonSchemaToZod(schema: JsonSchemaProperty | unknown): z.ZodType
     if (!s.properties) {
       return z.record(z.unknown());
     }
-    const shape: Record<string, z.ZodTypeAny> = {};
+    const shape: Record<string, Schema<any>> = {};
     const properties = s.properties || {};
     const required = new Set(s.required || []);
 
@@ -84,21 +84,31 @@ export function jsonSchemaToZod(schema: JsonSchemaProperty | unknown): z.ZodType
   return z.unknown();
 }
 
-export function jsonSchemaToZodObject(
-  schema: JsonSchemaProperty | unknown
-): z.ZodObject<z.ZodRawShape> {
+export function jsonSchemaToZodObject(schema: JsonSchemaProperty | unknown): any {
   const zod = jsonSchemaToZod(schema);
-  if (zod instanceof z.ZodObject) return zod;
+  if (zod instanceof ObjectSchema) return zod;
   return z.object({}).passthrough();
 }
 
-export function registerAllTools(server: McpServer): void {
+const warnedSpatialBlackboardActions = new Set<string>();
+function warnDeprecatedSpatialBlackboardAction(action: string, canonical: string): void {
+  if (!warnedSpatialBlackboardActions.has(action)) {
+    warnedSpatialBlackboardActions.add(action);
+    console.error(
+      `[DEPRECATION WARNING] action "${action}" is deprecated for use_spatial_blackboard. Use "${canonical}" instead.`
+    );
+  }
+}
+
+export function registerAllTools(server: any): void {
   for (const toolDef of toolDefinitions) {
     const isReadOnly = READ_ONLY_TOOLS.has(toolDef.name);
     const isDestructive = DESTRUCTIVE_ACTIONS.has(toolDef.name);
 
-    const rawZodSchema = jsonSchemaToZod(toolDef.inputSchema);
-    const zodShape = rawZodSchema instanceof z.ZodObject ? rawZodSchema.shape : {};
+    const effectiveSchema = JSON.parse(JSON.stringify(toolDef.inputSchema));
+    if (effectiveSchema.properties?.action) {
+      delete effectiveSchema.properties.action.enum;
+    }
 
     server.registerTool(
       toolDef.name,
@@ -109,12 +119,22 @@ export function registerAllTools(server: McpServer): void {
           destructiveHint: isDestructive,
           idempotentHint: isReadOnly,
         },
-        inputSchema: zodShape,
+        inputSchema: effectiveSchema,
+        rawJsonSchema: effectiveSchema,
       },
       async (args: any) => {
         const name = toolDef.name;
         try {
-          const project = getProjectSlug(args.project);
+          const projectSlug =
+            args?.project || process.env.WORLD_MODEL_MCP_PROJECT || process.env.PV_PROJECT;
+          if (!projectSlug || String(projectSlug).trim() === '') {
+            throw new McpError(
+              ErrorCode.InvalidParams,
+              `Parameter "project" is required for tool "${name}". Provide the "project" parameter or set the WORLD_MODEL_MCP_PROJECT environment variable.`
+            );
+          }
+          const project = getProjectSlug(String(projectSlug).trim());
+          if (args) args.project = project;
           const isWrite = !isReadOnly;
           const db = isWrite ? getDb(project) : getReadOnlyDb(project);
 
@@ -255,6 +275,7 @@ export function registerAllTools(server: McpServer): void {
                 result = SimulationEngine.simulateMovement(db, {
                   project,
                   entity_id: args.entity_id,
+                  start_position: args.start_position,
                   delta_position: args.delta_position,
                   velocity: args.velocity,
                   duration_seconds: args.duration_seconds,
@@ -404,34 +425,80 @@ export function registerAllTools(server: McpServer): void {
             }
 
             case 'use_spatial_blackboard': {
-              const action = args.action || 'read';
-              if (action === 'post') {
-                result = SpatialBlackboard.post(db, {
+              const action = args.action || 'get';
+              if (action === 'set') {
+                result = SpatialBlackboard.set(db, {
                   project,
                   topic: args.topic,
-                  sender: args.sender || 'agent',
+                  sender: args.sender || args.agent_id || 'agent',
                   payload: args.payload || {},
                   ttl_seconds: args.ttl_seconds,
                 });
+              } else if (action === 'post') {
+                warnDeprecatedSpatialBlackboardAction('post', 'set');
+                result = SpatialBlackboard.set(db, {
+                  project,
+                  topic: args.topic,
+                  sender: args.sender || args.agent_id || 'agent',
+                  payload: args.payload || {},
+                  ttl_seconds: args.ttl_seconds,
+                });
+              } else if (action === 'get') {
+                result = SpatialBlackboard.get(db, {
+                  project,
+                  topic: args.topic,
+                  id: args.id,
+                  include_expired: args.include_expired ?? false,
+                  limit: args.limit,
+                });
+              } else if (action === 'read') {
+                warnDeprecatedSpatialBlackboardAction('read', 'get');
+                result = SpatialBlackboard.get(db, {
+                  project,
+                  topic: args.topic,
+                  id: args.id,
+                  include_expired: args.include_expired ?? false,
+                  limit: args.limit,
+                });
+              } else if (action === 'delete') {
+                result = SpatialBlackboard.delete(db, {
+                  project,
+                  id: args.id,
+                  topic: args.topic,
+                });
+              } else if (action === 'lease') {
+                result = SpatialBlackboard.lease(db, {
+                  project,
+                  resource_id: args.resource_id || args.topic,
+                  agent_id: args.agent_id || args.sender || 'agent',
+                  duration_seconds: args.duration_seconds,
+                  mode: args.mode,
+                });
               } else if (action === 'claim') {
+                warnDeprecatedSpatialBlackboardAction('claim', 'lease');
                 result = SpatialBlackboard.claim(db, {
                   project,
                   resource_id: args.resource_id,
-                  agent_id: args.sender || 'agent',
+                  agent_id: args.agent_id || args.sender || 'agent',
                   duration_seconds: args.duration_seconds,
                 });
               } else if (action === 'release') {
+                warnDeprecatedSpatialBlackboardAction('release', 'lease');
                 result = SpatialBlackboard.release(db, {
                   project,
                   resource_id: args.resource_id,
-                  agent_id: args.sender || 'agent',
+                  agent_id: args.agent_id || args.sender || 'agent',
+                });
+              } else if (action === 'list') {
+                result = SpatialBlackboard.list(db, {
+                  project,
+                  limit: args.limit,
+                  topic_prefix: args.topic_prefix,
                 });
               } else {
-                result = SpatialBlackboard.read(db, {
-                  project,
-                  topic: args.topic,
-                  include_expired: false,
-                });
+                throw new Error(
+                  `Unsupported action "${action}" for use_spatial_blackboard. Supported actions: get, set, delete, lease, list (deprecated: post, read, claim, release).`
+                );
               }
               break;
             }
@@ -592,6 +659,15 @@ export function registerAllTools(server: McpServer): void {
             ],
           };
         } catch (err: unknown) {
+          if (
+            err instanceof McpError ||
+            (err &&
+              typeof err === 'object' &&
+              'code' in err &&
+              (err as any).code === ErrorCode.InvalidParams)
+          ) {
+            throw err;
+          }
           const errMsg = err instanceof Error ? err.message : String(err);
           const advice = SchemaAdvisor.getAdvice(toolDef.name, errMsg, args);
           return {

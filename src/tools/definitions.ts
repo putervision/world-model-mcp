@@ -12,6 +12,7 @@ export const DESTRUCTIVE_ACTIONS = new Set([
   'remove_relation',
   'restore_snapshot',
   'undo',
+  'delete',
 ]);
 
 export interface ToolDefinition {
@@ -586,27 +587,37 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'use_spatial_blackboard',
     description:
-      'Multi-agent shared spatial blackboard for publishing ephemeral intentions, waypoints, and claiming exclusive spatial access to prevent collisions.',
+      'Multi-agent shared spatial blackboard for intent publishing and claiming mutex locks. Actions: get, set, delete, lease, list (legacy: post, read, claim, release).',
     inputSchema: {
       type: 'object',
       properties: {
         action: {
           type: 'string',
-          enum: ['post', 'read', 'claim', 'release'],
-          description: 'Action to perform (default: read)',
+          enum: ['get', 'set', 'delete', 'lease', 'list', 'post', 'read', 'claim', 'release'],
+          description: 'Action to perform (default: get)',
         },
         topic: { type: 'string', description: 'Blackboard topic name' },
+        id: { type: 'string', description: 'Blackboard entry identifier for get or delete' },
         sender: { type: 'string', description: 'Agent identifier posting or claiming' },
+        agent_id: { type: 'string', description: 'Agent identifier (alias for sender)' },
         payload: {
           type: 'object',
           description: 'Payload object (supports coordinates for collision alerts)',
         },
-        resource_id: { type: 'string', description: 'Resource or entity ID to claim/release' },
+        resource_id: { type: 'string', description: 'Resource or entity ID to lease or release' },
+        mode: {
+          type: 'string',
+          enum: ['acquire', 'release'],
+          description: 'Lease action mode: acquire or release (default: acquire)',
+        },
         duration_seconds: {
           type: 'number',
-          description: 'Claim duration in seconds (default: 60)',
+          description: 'Lease duration in seconds (default: 60)',
         },
         ttl_seconds: { type: 'number', description: 'Post TTL expiration in seconds' },
+        limit: { type: 'number', description: 'Maximum number of items or topics to return' },
+        include_expired: { type: 'boolean', description: 'Whether to include expired entries' },
+        topic_prefix: { type: 'string', description: 'Prefix filter for listing topics' },
         project: { type: 'string', description: 'Optional project identifier' },
       },
     },

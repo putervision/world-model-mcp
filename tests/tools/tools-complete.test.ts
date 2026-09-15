@@ -9,9 +9,11 @@ import {
 } from '../../src/tools/handlers.js';
 import { translateLegacyWorldCall, adaptLegacyParameters } from '../../src/tools/compat-shim.js';
 import { registerAllPrompts } from '../../src/tools/prompts.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import {
+  NativeMcpServer as McpServer,
+  NativeClient as Client,
+  NativeInMemoryTransport as InMemoryTransport,
+} from '../../src/transport/native-mcp.js';
 
 describe('MCP Tools, Handlers, Shim & Prompts Complete', () => {
   const project = 'test-tools-prompts-full';
@@ -359,5 +361,34 @@ describe('MCP Tools, Handlers, Shim & Prompts Complete', () => {
 
     await client.close();
     await srv.close();
+  });
+
+  it('enforces mandatory project slug (E7) - fails with InvalidParams when missing', async () => {
+    const srv = new McpServer({ name: 'project-slug-srv', version: '0.1.0' });
+    registerAllTools(srv);
+
+    const [cTransport, sTransport] = InMemoryTransport.createLinkedPair();
+    await srv.connect(sTransport);
+    const client = new Client({ name: 'client', version: '0.1.0' }, { capabilities: {} });
+    await client.connect(cTransport);
+
+    const oldProject = process.env.WORLD_MODEL_MCP_PROJECT;
+    const oldPv = process.env.PV_PROJECT;
+    delete process.env.WORLD_MODEL_MCP_PROJECT;
+    delete process.env.PV_PROJECT;
+
+    try {
+      const res = await client.callTool({
+        name: 'query_entities',
+        arguments: {},
+      });
+      expect(res.isError).toBe(true);
+      expect((res.content as any)[0].text).toContain('Parameter "project" is required');
+    } finally {
+      if (oldProject !== undefined) process.env.WORLD_MODEL_MCP_PROJECT = oldProject;
+      if (oldPv !== undefined) process.env.PV_PROJECT = oldPv;
+      await client.close();
+      await srv.close();
+    }
   });
 });

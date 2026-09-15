@@ -85,6 +85,123 @@ export class SpatialBlackboard {
     };
   }
 
+  static set(
+    db: Database.Database,
+    params: {
+      project: string;
+      topic: string;
+      sender: string;
+      payload: Record<string, any>;
+      ttl_seconds?: number;
+    }
+  ): { item: BlackboardItem; collision_warnings?: string[] } {
+    return this.post(db, params);
+  }
+
+  static get(
+    db: Database.Database,
+    params: {
+      project: string;
+      topic?: string;
+      id?: string;
+      include_expired?: boolean;
+      limit?: number;
+    }
+  ): BlackboardItem[] | BlackboardItem | null {
+    if (params.id) {
+      const row = db
+        .prepare('SELECT * FROM blackboard_items WHERE project = ? AND id = ?')
+        .get(params.project, params.id) as BlackboardItemRow | undefined;
+      if (!row) return null;
+      return {
+        id: row.id,
+        project: row.project,
+        topic: row.topic,
+        sender: row.sender,
+        payload: safeJsonParse(row.payload_json || '{}', {}),
+        claimed_by: row.claimed_by || undefined,
+        claimed_until: row.claimed_until || undefined,
+        expires_at: row.expires_at || undefined,
+        created_at: row.created_at,
+      };
+    }
+    return this.read(db, params);
+  }
+
+  static delete(
+    db: Database.Database,
+    params: {
+      project: string;
+      id?: string;
+      topic?: string;
+    }
+  ): { success: boolean; deleted_count: number } {
+    if (params.id) {
+      const res = db
+        .prepare('DELETE FROM blackboard_items WHERE project = ? AND id = ?')
+        .run(params.project, params.id);
+      return { success: res.changes > 0, deleted_count: res.changes };
+    }
+    if (params.topic) {
+      const res = db
+        .prepare('DELETE FROM blackboard_items WHERE project = ? AND topic = ?')
+        .run(params.project, params.topic);
+      return { success: res.changes > 0, deleted_count: res.changes };
+    }
+    return { success: false, deleted_count: 0 };
+  }
+
+  static lease(
+    db: Database.Database,
+    params: {
+      project: string;
+      resource_id: string;
+      agent_id: string;
+      duration_seconds?: number;
+      mode?: 'acquire' | 'release';
+    }
+  ): { success: boolean; message: string; expires_at?: string } {
+    if (params.mode === 'release') {
+      return this.release(db, {
+        project: params.project,
+        resource_id: params.resource_id,
+        agent_id: params.agent_id,
+      });
+    }
+    return this.claim(db, {
+      project: params.project,
+      resource_id: params.resource_id,
+      agent_id: params.agent_id,
+      duration_seconds: params.duration_seconds,
+    });
+  }
+
+  static list(
+    db: Database.Database,
+    params: {
+      project: string;
+      limit?: number;
+      topic_prefix?: string;
+    }
+  ): { topics: string[]; count: number } {
+    const now = getCurrentIsoString();
+    let query =
+      'SELECT DISTINCT topic FROM blackboard_items WHERE project = ? AND (expires_at IS NULL OR expires_at > ?)';
+    const queryParams: any[] = [params.project, now];
+
+    if (params.topic_prefix) {
+      query += ' AND topic LIKE ?';
+      queryParams.push(`${params.topic_prefix}%`);
+    }
+
+    query += ' ORDER BY topic ASC LIMIT ?';
+    queryParams.push(params.limit || 50);
+
+    const rows = db.prepare(query).all(...queryParams) as { topic: string }[];
+    const topics = rows.map((r) => r.topic);
+    return { topics, count: topics.length };
+  }
+
   static read(
     db: Database.Database,
     params: {

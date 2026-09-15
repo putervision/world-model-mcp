@@ -7,7 +7,7 @@ export function getBridgeScript(): string {
   if (window.__WORLD_MODEL_BRIDGE) return window.__WORLD_MODEL_BRIDGE;
 
   const bridge = {
-    version: '0.3.1',
+    version: '0.4.0',
 
     /**
      * Locate the active Three.js scene object on the page.

@@ -10,9 +10,7 @@ import { NavigationEngine } from '../src/engine/navigation.js';
 import { exportTrajectories } from '../src/engine/export.js';
 import { waitForSpatialState } from '../src/engine/polling.js';
 import { registerAllTools } from '../src/tools/handlers.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { NativeMcpServer as McpServer, NativeClient as Client, NativeInMemoryTransport as InMemoryTransport } from '../src/transport/native-mcp.js';
 
 describe('Ultra Branch Coverage Suite', () => {
   let db: Database.Database;

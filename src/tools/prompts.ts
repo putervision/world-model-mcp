@@ -1,21 +1,33 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
 import { getWorldSummary } from '../engine/summary.js';
 import { getDb, getProjectSlug } from '../engine/db.js';
 import { EntityStore } from '../engine/entity-store.js';
 
-export function registerAllPrompts(server: McpServer): void {
-  server.registerPrompt(
+export function registerAllPrompts(server: any): void {
+  const registerPrompt = (
+    name: string,
+    metadata: { title: string; description: string; argsSchema?: Record<string, any> },
+    handler: (args: any, extra?: { signal?: AbortSignal }) => Promise<any> | any
+  ) => {
+    if (typeof server.registerPrompt === 'function') {
+      server.registerPrompt(name, metadata, handler);
+    } else if (typeof server.prompt === 'function') {
+      server.prompt(name, metadata.description, metadata.argsSchema || {}, handler);
+    }
+  };
+
+  registerPrompt(
     'explore-surroundings',
     {
       title: 'Explore Surroundings',
       description: "Generate spatial context and environment awareness prompt for agent's location",
       argsSchema: {
-        project: z.string().optional().describe('Optional project identifier'),
-        agent_entity_id: z.string().optional().describe('Agent entity ID'),
+        properties: {
+          project: { type: 'string', description: 'Optional project identifier' },
+          agent_entity_id: { type: 'string', description: 'Agent entity ID' },
+        },
       },
     },
-    async (args) => {
+    async (args: any) => {
       const project = getProjectSlug(args.project);
       const db = getDb(project);
       const summary = getWorldSummary(db, { project });
@@ -43,18 +55,21 @@ export function registerAllPrompts(server: McpServer): void {
     }
   );
 
-  server.registerPrompt(
+  registerPrompt(
     'plan-navigation',
     {
       title: 'Plan Navigation',
       description: 'Generate navigation and movement plan between entities',
       argsSchema: {
-        project: z.string().optional().describe('Optional project identifier'),
-        start_entity_id: z.string().describe('Starting entity ID'),
-        target_entity_id: z.string().describe('Destination entity ID'),
+        properties: {
+          project: { type: 'string', description: 'Optional project identifier' },
+          start_entity_id: { type: 'string', description: 'Starting entity ID' },
+          target_entity_id: { type: 'string', description: 'Destination entity ID' },
+        },
+        required: ['start_entity_id', 'target_entity_id'],
       },
     },
-    async (args) => {
+    async (args: any) => {
       const project = getProjectSlug(args.project);
       return {
         description: 'Plan spatial navigation',
@@ -71,17 +86,19 @@ export function registerAllPrompts(server: McpServer): void {
     }
   );
 
-  server.registerPrompt(
+  registerPrompt(
     'diagnose-spatial-anomalies',
     {
       title: 'Diagnose Spatial Anomalies',
       description:
         'Analyze world model for physical overlaps, orphan relations, and permanence decay anomalies',
       argsSchema: {
-        project: z.string().optional().describe('Optional project identifier'),
+        properties: {
+          project: { type: 'string', description: 'Optional project identifier' },
+        },
       },
     },
-    async (args) => {
+    async (args: any) => {
       const project = getProjectSlug(args.project);
       const db = getDb(project);
       const { SchemaAdvisor } = await import('../engine/advisor.js');
@@ -103,23 +120,26 @@ export function registerAllPrompts(server: McpServer): void {
     }
   );
 
-  server.registerPrompt(
+  registerPrompt(
     'navigate-game-world',
     {
       title: 'Navigate Game World (Playwright & Three.js/2D)',
       description:
         'Step-by-step perception-action loop recipe for autonomous game navigation with Playwright and Three.js/2D canvas',
       argsSchema: {
-        project: z.string().optional().describe('Optional project identifier'),
-        agent_entity_id: z.string().describe('Player or agent entity ID'),
-        target_entity_id: z.string().describe('Target destination entity or item ID'),
-        control_scheme: z
-          .string()
-          .optional()
-          .describe('Control scheme (wasd, arrows, click_to_move)'),
+        properties: {
+          project: { type: 'string', description: 'Optional project identifier' },
+          agent_entity_id: { type: 'string', description: 'Player or agent entity ID' },
+          target_entity_id: { type: 'string', description: 'Target destination entity or item ID' },
+          control_scheme: {
+            type: 'string',
+            description: 'Control scheme (wasd, arrows, click_to_move)',
+          },
+        },
+        required: ['agent_entity_id', 'target_entity_id'],
       },
     },
-    async (args) => {
+    async (args: any) => {
       const project = getProjectSlug(args.project);
       const scheme = args.control_scheme || 'wasd';
 

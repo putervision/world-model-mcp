@@ -1,12 +1,13 @@
 import * as path from "path";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { server } from "./server.js";
+import { server, createNativeServer } from "./server.js";
+import { NativeStdioTransport } from "./transport/native-mcp.js";
 import { logger } from "./utils/logger.js";
 import { closeAllDbs, resolveProjectRoot, getProjectSlug } from "./engine/db.js";
 import { runAutoInit } from "./cli/init.js";
 import { VERSION } from "./utils/version.js";
 
 let isShuttingDown = false;
+let activeServer: { close(): Promise<void> } = server;
 
 async function shutdown(signal: string) {
   if (isShuttingDown) return;
@@ -20,7 +21,7 @@ async function shutdown(signal: string) {
   forceTimer.unref();
 
   try {
-    await server.close();
+    await activeServer.close();
     logger.info("MCP server connection closed.");
   } catch (err: any) {
     logger.error("Error closing MCP server:", err.message);
@@ -53,8 +54,11 @@ async function main() {
     logger.warn(`Auto-initialization skipped: ${err.message}`);
   }
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  logger.info('Starting world-model-mcp with Native MCP Transport (Zero SDK)...');
+  const native = createNativeServer();
+  const nativeTransport = new NativeStdioTransport();
+  await native.connect(nativeTransport);
+  activeServer = native;
   logger.info("world-model-mcp server connected over stdio.");
 }
 

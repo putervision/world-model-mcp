@@ -2,6 +2,13 @@
 
 All notable changes to `@putervision/world-model-mcp` will be documented in this file.
 
+## [0.4.0] - 2026-09-15
+
+### 🚀 Zero-Dependency Native MCP Transport & Cross-Pentad Synchronization
+- Added zero-dependency Native MCP Transport engine (`PV_NATIVE_TRANSPORT=1`) with pure Node.js readline stdio, dynamic version negotiation, and schema validation.
+- Fixed `simulate_movement` schema and position-only simulation handling.
+- Synchronized package manifests, registry configurations (`server.json`, `manifest.json`), and documentation across the Pentad.
+
 ## [0.3.1] - 2026-08-30
 
 ### 🚀 Autonomous Gaming Suite & Script Generation

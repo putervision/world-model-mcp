@@ -10,9 +10,7 @@ import { TilemapMapper } from '../src/utils/projection.js';
 import { computeEventHash, getEntityHistory } from '../src/engine/events.js';
 import { registerAllTools } from '../src/tools/handlers.js';
 import { getDb } from '../src/engine/db.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { NativeMcpServer as McpServer, NativeClient as Client, NativeInMemoryTransport as InMemoryTransport } from '../src/transport/native-mcp.js';
 
 describe('Master Branch Coverage Booster Suite (>90% Overall)', () => {
   let db: Database.Database;

@@ -9,9 +9,7 @@ import { TimeTravelEngine } from '../src/engine/time-travel.js';
 import { registerAllTools } from '../src/tools/handlers.js';
 import { verifyEventAuditChain } from '../src/engine/events.js';
 import { getDb } from '../src/engine/db.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { NativeMcpServer as McpServer, NativeClient as Client, NativeInMemoryTransport as InMemoryTransport } from '../src/transport/native-mcp.js';
 
 describe('Cross The Finish Line Suite (>90% Branch Coverage Guaranteed)', () => {
   let db: Database.Database;

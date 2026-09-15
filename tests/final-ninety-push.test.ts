@@ -5,9 +5,7 @@ import { EntityStore } from '../src/engine/entity-store.js';
 import { EvidenceEngine } from '../src/engine/evidence.js';
 import { registerAllTools } from '../src/tools/handlers.js';
 import { getDb } from '../src/engine/db.js';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { NativeMcpServer as McpServer, NativeClient as Client, NativeInMemoryTransport as InMemoryTransport } from '../src/transport/native-mcp.js';
 
 describe('Final Push to >90% Branch Coverage', () => {
   let db: Database.Database;
