@@ -1,6 +1,6 @@
 # 🚀 Migration Guide: @putervision/world-model-mcp
 
-This guide explains how to migrate client integrations, custom agents, and tool callers to the unified **v0.4.0+ API** with native transport and consolidated spatial semantics.
+This guide explains how to migrate client integrations, custom agents, and tool callers to the unified **v0.4.1+ API** with native transport and consolidated spatial semantics.
 
 ---
 

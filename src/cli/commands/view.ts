@@ -2,7 +2,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import { getDb, getProjectSlug, resolveProjectRoot } from '../../engine/db.js';
 import { EntityStore } from '../../engine/entity-store.js';
 import { SpatialGraph } from '../../engine/spatial-graph.js';
@@ -340,12 +340,18 @@ export async function runView(args: string[] = []): Promise<void> {
     console.log(`🎮 Autonomous Playwright Game Arena available at: http://127.0.0.1:${port}/game\n`);
     console.log('Press Ctrl+C to stop the server.\n');
 
-    // Auto-open browser
-    const startCmd =
-      process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-    exec(`${startCmd} ${url}`, (err) => {
-      if (err) logger.debug(`Failed to auto-open browser: ${err.message}`);
-    });
+    // Auto-open browser safely without shell interpolation
+    try {
+      if (process.platform === 'darwin') {
+        spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
+      } else if (process.platform === 'win32') {
+        spawn('cmd.exe', ['/c', 'start', '""', url], { detached: true, stdio: 'ignore' }).unref();
+      } else {
+        spawn('xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
+      }
+    } catch (err: any) {
+      logger.debug(`Failed to auto-open browser: ${err.message}`);
+    }
   });
 }
 

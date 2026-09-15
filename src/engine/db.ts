@@ -113,14 +113,32 @@ export function resolveProjectRoot(project?: string, cwd = process.cwd()): strin
 
 export function getProjectSlug(project?: string, cwd = process.cwd()): string {
   if (project && project.trim().length > 0) {
-    return sanitizeSlug(project);
+    const slug = sanitizeSlug(project);
+    if (!slug) {
+      throw new DatabaseError(
+        `Invalid project identifier "${project}": must contain at least one alphanumeric character.`
+      );
+    }
+    return slug;
   }
   const root = resolveProjectRoot(project, cwd);
   const config = loadProjectConfig(root);
   if (config.projectName) {
-    return sanitizeSlug(config.projectName);
+    const slug = sanitizeSlug(config.projectName);
+    if (!slug) {
+      throw new DatabaseError(
+        `Invalid project name "${config.projectName}": must contain at least one alphanumeric character.`
+      );
+    }
+    return slug;
   }
-  return sanitizeSlug(path.basename(root));
+  const slug = sanitizeSlug(path.basename(root));
+  if (!slug) {
+    throw new DatabaseError(
+      `Invalid project root name "${path.basename(root)}": must contain at least one alphanumeric character.`
+    );
+  }
+  return slug;
 }
 
 export function getBaseDir(projectRoot: string): string {
@@ -138,7 +156,17 @@ export function getProjectDbDir(project?: string, cwd = process.cwd()): string {
   const root = resolveProjectRoot(project, cwd);
   const slug = getProjectSlug(project, cwd);
   const baseDir = getBaseDir(root);
-  return path.join(baseDir, slug);
+  const targetDir = path.resolve(path.join(baseDir, slug));
+
+  const relative = path.relative(baseDir, targetDir);
+  const isSafe = relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+  if (!isSafe) {
+    throw new DatabaseError(
+      `Path traversal detected: target directory "${targetDir}" is outside allowed base directory "${baseDir}"`
+    );
+  }
+
+  return targetDir;
 }
 
 export function getDbPath(project?: string, cwd = process.cwd()): string {

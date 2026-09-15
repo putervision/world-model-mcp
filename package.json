@@ -1,6 +1,6 @@
 {
   "name": "@putervision/world-model-mcp",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Deterministic, persistent 3D/2D spatial world model for AI agents with entity tracking, object permanence, movement simulation, and expected view frustum projection.",
   "keywords": [
     "mcp",
@@ -94,7 +94,9 @@
     "test:stress": "vitest run tests/engine/geometry-frustum-stress.test.ts tests/integration/concurrency-stress.test.ts",
     "test:unit": "vitest run tests/engine tests/utils tests/schema tests/browser",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "version:check": "node scripts/sync-version.mjs --check",
+    "version:sync": "node scripts/sync-version.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0"

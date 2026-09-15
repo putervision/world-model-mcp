@@ -256,6 +256,13 @@ export const migrations: Migration[] = [
       } catch {
         // column may already exist
       }
+
+      // 5. Composite query indexes
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_entities_project_status_type ON entities(project, status, type);
+        CREATE INDEX IF NOT EXISTS idx_relations_project_source_rel ON spatial_relations(project, source_id, relation);
+        CREATE INDEX IF NOT EXISTS idx_relations_project_target_rel ON spatial_relations(project, target_id, relation);
+      `);
     },
   },
 ];

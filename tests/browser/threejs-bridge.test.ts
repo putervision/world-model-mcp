@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getBridgeScript } from '../../src/browser/threejs-bridge.js';
+import { VERSION } from '../../src/utils/version.js';
 
 describe('Three.js Browser Bridge (src/browser/threejs-bridge.ts)', () => {
   it('generates a valid, self-executing bridge script string', () => {
@@ -14,7 +15,7 @@ describe('Three.js Browser Bridge (src/browser/threejs-bridge.ts)', () => {
 
   it('script defines valid JSON-compatible methods', () => {
     const script = getBridgeScript();
-    expect(script).toContain("version: '0.4.0'");
+    expect(script).toContain(`version: '${VERSION}'`);
     expect(script).toContain('observer_pose:');
     expect(script).toContain('detections:');
   });

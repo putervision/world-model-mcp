@@ -1,6 +1,7 @@
 # @putervision/world-model-mcp
 
 [![npm version](https://img.shields.io/npm/v/@putervision/world-model-mcp.svg)](https://www.npmjs.com/package/@putervision/world-model-mcp)
+[![version](https://img.shields.io/badge/version-0.4.1-blue.svg)](./CHANGELOG.md)
 [![npm downloads](https://img.shields.io/npm/dm/@putervision/world-model-mcp.svg)](https://www.npmjs.com/package/@putervision/world-model-mcp)
 [![CI](https://github.com/putervision/world-model-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/putervision/world-model-mcp/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.18.0-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org)

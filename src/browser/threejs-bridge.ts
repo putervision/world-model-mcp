@@ -1,3 +1,5 @@
+import { VERSION } from '../utils/version.js';
+
 /**
  * Injectable Three.js / WebGL Browser Bridge for Playwright automation.
  * This code is injected into the target browser page via Playwright's `browser_evaluate`.
@@ -7,7 +9,7 @@ export function getBridgeScript(): string {
   if (window.__WORLD_MODEL_BRIDGE) return window.__WORLD_MODEL_BRIDGE;
 
   const bridge = {
-    version: '0.4.0',
+    version: '${VERSION}',
 
     /**
      * Locate the active Three.js scene object on the page.
