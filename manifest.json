@@ -6,7 +6,7 @@
   "author": {
     "name": "PuterVision"
   },
-  "homepage": "https://github.com/putervision/world-model-mcp#readme",
+  "homepage": "https://worldmodelmcp.com",
   "server": {
     "type": "node",
     "entry_point": "./dist/index.js",
