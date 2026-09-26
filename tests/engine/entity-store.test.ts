@@ -123,4 +123,47 @@ describe('EntityStore Comprehensive', () => {
     expect(likeResults.length).toBe(1);
     expect(likeResults[0].name).toBe('Special*Item');
   });
+
+  it('computes compact SpatialSlice with getNearestEntities, bearing, obstacle distance, and spatial_hash', () => {
+    // Add multiple entities
+    EntityStore.addEntity(db, {
+      project,
+      name: 'Tree Obstacle',
+      type: 'obstacle',
+      position: { x: 3, y: 4, z: 0 }, // dist = 5 from (0,0,0)
+      confidence: 0.95,
+      properties: { collidable: true },
+    });
+
+    EntityStore.addEntity(db, {
+      project,
+      name: 'Far Coin',
+      type: 'item',
+      position: { x: 10, y: 0, z: 0 }, // dist = 10, bearing = 0
+      confidence: 0.8,
+    });
+
+    const slice = EntityStore.getNearestEntities(db, {
+      project,
+      observer: [0, 0, 0],
+      k: 10,
+    });
+
+    expect(slice.observer_position).toEqual([0, 0, 0]);
+    expect(slice.visible_entities.length).toBe(2);
+    expect(slice.visible_entities[0].type).toBe('obstacle');
+    expect(slice.visible_entities[0].distance).toBe(5);
+    expect(slice.nearest_obstacle_distance).toBe(5);
+    expect(slice.spatial_hash).toMatch(/^[0-9a-f]{64}$/);
+
+    // Test bearing with heading = 90 deg
+    const sliceWithHeading = EntityStore.getNearestEntities(db, {
+      project,
+      observer: { x: 0, y: 0, z: 0, heading: 90 },
+      k: 16,
+    });
+    // Far Coin is at (10, 0, 0) -> angle = 0, with heading 90 -> bearing = -90
+    const farCoin = sliceWithHeading.visible_entities.find((e) => e.type === 'item');
+    expect(farCoin?.bearing).toBe(-90);
+  });
 });

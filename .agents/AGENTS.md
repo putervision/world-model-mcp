@@ -165,7 +165,7 @@ This project uses `agent-reasoning-mcp` with project slug "world-model-mcp" to m
 5. **Intention Dispatch**: Create execution directives with `manage_intentions(action: "create", ...)` for the runtime engine.
 6. **Reactive Replanning**: If an unexpected blocker occurs, invoke `replan(action: "blocker", goal_id: "...", blocker_description: "...")`.
 
-## 10 Core MCP Tools
+## 15 Core MCP Tools
 - `set_goal`: Manage goal hierarchy and task DAGs.
 - `evaluate_situation`: Score and rank candidate actions from environment snapshots.
 - `replan`: Adaptively reconstruct subgoals upon obstacles.
@@ -176,6 +176,11 @@ This project uses `agent-reasoning-mcp` with project slug "world-model-mcp" to m
 - `manage_beliefs`: Structured belief state with exponential confidence decay.
 - `manage_intentions`: Wire contract directives queue for runtime execution.
 - `manage_reasoning_db`: Snapshots, diagnostics, and SHA-256 Merkle audit verification.
+- `classify`: Zero-LLM deterministic classification against hierarchical taxonomy (<2ms SLA).
+- `ask_noul`: Fast binary (Yes/No/Abstain) heuristic gate evaluating conditions (<2ms SLA).
+- `ask_choice`: Deterministic multi-alternative selection ranking candidate choices (<2ms SLA).
+- `ask_score`: Heuristic utility evaluation scoring target entities on a bounded scale (<2ms SLA).
+- `gate_intention`: Fast-path safety & feasibility filter checking preconditions before execution (<1ms SLA).
 <!-- agent-reasoning-mcp:end -->
 
 <!-- putervision-harness:start -->
@@ -183,11 +188,11 @@ This project uses `agent-reasoning-mcp` with project slug "world-model-mcp" to m
 
 Active Supervised MCP Servers:
 * `putervision-harness`: pv-harness start --project test_slug
-* `state-memory-mcp`: state-memory-mcp --project test_slug
-* `vision-memory-mcp`: vision-memory-mcp --project test_slug
-* `world-model-mcp`: world-model-mcp --project test_slug
-* `agent-reasoning-mcp`: agent-reasoning-mcp --project test_slug
-* `behavior-mcp`: behavior-mcp --project test_slug
+* `state-memory-mcp`: state-memory-mcp 
+* `vision-memory-mcp`: vision-memory-mcp 
+* `world-model-mcp`: world-model-mcp 
+* `agent-reasoning-mcp`: agent-reasoning-mcp 
+* `behavior-mcp`: behavior-mcp 
 * `test-custom`: npx -y @org/test-custom
 
 Always use `harness_start_loop` and supervise tasks via the PuterVision Harness.

@@ -528,3 +528,16 @@ export interface GameInputSequence {
   xdotool_script?: string;
   powershell_script?: string;
 }
+
+export interface SpatialSlice {
+  observer_position?: [number, number, number];
+  visible_entities: Array<{
+    id: string;
+    type: string;
+    distance: number;
+    bearing?: number; // degrees relative to heading
+    confidence: number;
+  }>;
+  nearest_obstacle_distance?: number;
+  spatial_hash: string; // Merkle root of active scene graph
+}

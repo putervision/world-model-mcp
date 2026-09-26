@@ -1,4 +1,4 @@
-# API Reference — @putervision/world-model-mcp
+# API Reference — @putervision/world-model-mcp (v0.5.0 — 15 Tools)
 
 Complete reference for all 15 Model Context Protocol (MCP) tools provided by `@putervision/world-model-mcp`.
 
