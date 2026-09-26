@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
-import { Entity, EntityRow, EntityType, EntityStatus } from '../schema/types.js';
+import crypto from 'node:crypto';
+import { Entity, EntityRow, EntityType, EntityStatus, SpatialSlice } from '../schema/types.js';
 import { parseEntityRow } from './row-mappers.js';
 import { generateId } from '../utils/id.js';
 import { getCurrentIsoString } from '../utils/time.js';
@@ -7,6 +8,8 @@ import { Vector3D, Orientation3D, BoundingBoxSize, vec3Distance } from '../utils
 import { logEntityEvent } from './events.js';
 import { ValidationError } from '../utils/errors.js';
 import { sanitizeKeys } from '../utils/sanitize.js';
+import { canonicalJsonStringify } from '../utils/canonical-json.js';
+
 
 export class EntityStore {
   static addEntity(
@@ -455,4 +458,157 @@ export class EntityStore {
     const limit = params.limit || 50;
     return results.slice(0, limit);
   }
+
+  static getNearestEntities(
+    db: Database.Database,
+    params: {
+      project: string;
+      observer?:
+        | {
+            x?: number;
+            y?: number;
+            z?: number;
+            heading?: number;
+            position?: Vector3D | [number, number, number];
+          }
+        | [number, number, number]
+        | Vector3D;
+      k?: number;
+    }
+  ): SpatialSlice {
+    const allEntities = EntityStore.listEntities(db, {
+      project: params.project,
+      status: 'active',
+      limit: 10000,
+    });
+
+    let x0 = 0;
+    let y0 = 0;
+    let z0 = 0;
+    let heading = 0;
+    let hasObserver = false;
+
+    if (Array.isArray(params.observer)) {
+      x0 = params.observer[0] ?? 0;
+      y0 = params.observer[1] ?? 0;
+      z0 = params.observer[2] ?? 0;
+      hasObserver = true;
+    } else if (params.observer && typeof params.observer === 'object') {
+      const obs = params.observer as any;
+      if (Array.isArray(obs.position)) {
+        x0 = obs.position[0] ?? 0;
+        y0 = obs.position[1] ?? 0;
+        z0 = obs.position[2] ?? 0;
+        hasObserver = true;
+      } else if (obs.position && typeof obs.position === 'object') {
+        x0 = obs.position.x ?? 0;
+        y0 = obs.position.y ?? 0;
+        z0 = obs.position.z ?? 0;
+        hasObserver = true;
+      } else if (
+        typeof obs.x === 'number' ||
+        typeof obs.y === 'number' ||
+        typeof obs.z === 'number'
+      ) {
+        x0 = obs.x ?? 0;
+        y0 = obs.y ?? 0;
+        z0 = obs.z ?? 0;
+        hasObserver = true;
+      }
+      if (typeof obs.heading === 'number') {
+        heading = obs.heading;
+      }
+    }
+
+    if (!hasObserver) {
+      // Find observer entity (agent, camera, player)
+      const observerEntity = allEntities.find(
+        (e) =>
+          e.position &&
+          ((e.type as string) === 'agent' ||
+            (e.type as string) === 'camera' ||
+            e.type === 'npc' ||
+            e.name.toLowerCase() === 'agent' ||
+            e.tags?.includes('observer'))
+      );
+      if (observerEntity && observerEntity.position) {
+        x0 = observerEntity.position.x;
+        y0 = observerEntity.position.y;
+        z0 = observerEntity.position.z;
+        if (observerEntity.orientation?.yaw !== undefined) {
+          heading = observerEntity.orientation.yaw;
+        }
+        hasObserver = true;
+      }
+    }
+
+    const maxK = Math.min(16, Math.max(1, params.k ?? 16));
+    const positionedEntities = allEntities.filter((e) => e.position);
+
+    const calculated = positionedEntities.map((e) => {
+      const pos = e.position!;
+      const dx = pos.x - x0;
+      const dy = pos.y - y0;
+      const dz = pos.z - z0;
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      let bearing = Math.atan2(dy, dx) * (180 / Math.PI) - heading;
+      while (bearing > 180) bearing -= 360;
+      while (bearing < -180) bearing += 360;
+      return {
+        id: e.id,
+        type: e.type,
+        distance: Math.round(dist * 1000) / 1000,
+        bearing: Math.round(bearing * 100) / 100,
+        confidence: e.confidence,
+        entity: e,
+      };
+    });
+
+    calculated.sort((a, b) => a.distance - b.distance);
+
+    const visible_entities = calculated.slice(0, maxK).map((item) => ({
+      id: item.id,
+      type: item.type,
+      distance: item.distance,
+      bearing: item.bearing,
+      confidence: item.confidence,
+    }));
+
+    let nearest_obstacle_distance: number | undefined = undefined;
+    for (const item of calculated) {
+      const e = item.entity;
+      const isObstacle = Boolean(
+        e.properties?.is_obstacle ||
+          e.properties?.collidable ||
+          e.tags?.includes('obstacle') ||
+          e.tags?.includes('collidable') ||
+          e.type === 'obstacle'
+      );
+      if (isObstacle) {
+        if (nearest_obstacle_distance === undefined || item.distance < nearest_obstacle_distance) {
+          nearest_obstacle_distance = item.distance;
+        }
+      }
+    }
+
+    const sortedSummary = allEntities
+      .slice()
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((e) => ({ id: e.id, v: e.version }));
+
+    const spatial_hash = crypto
+      .createHash('sha256')
+      .update(canonicalJsonStringify(sortedSummary))
+      .digest('hex');
+
+    const result: SpatialSlice = {
+      observer_position: hasObserver ? [x0, y0, z0] : undefined,
+      visible_entities,
+      nearest_obstacle_distance,
+      spatial_hash,
+    };
+
+    return result;
+  }
 }
+

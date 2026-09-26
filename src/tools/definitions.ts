@@ -239,9 +239,23 @@ export const toolDefinitions: ToolDefinition[] = [
             'joint',
             'spatial_vlm',
             'summary',
+            'compact_slice',
           ],
           description:
-            'Export or view format (default: json, use "summary" for high-level environment overview)',
+            'Export or view format (default: json, use "summary" for high-level environment overview, "compact_slice" for fast System One decision slice)',
+        },
+        observer_position: {
+          type: 'array',
+          items: { type: 'number' },
+          description: 'Optional [x, y, z] observer position for compact_slice',
+        },
+        observer_heading: {
+          type: 'number',
+          description: 'Optional heading angle in degrees for compact_slice bearing calculation',
+        },
+        k: {
+          type: 'number',
+          description: 'Max nearest entities to include in compact_slice (default: 16)',
         },
         min_confidence: {
           type: 'number',

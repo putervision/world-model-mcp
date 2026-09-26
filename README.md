@@ -1,7 +1,7 @@
 # @putervision/world-model-mcp
 
 [![npm version](https://img.shields.io/npm/v/@putervision/world-model-mcp.svg)](https://www.npmjs.com/package/@putervision/world-model-mcp)
-[![version](https://img.shields.io/badge/version-0.4.1-blue.svg)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.5.0-blue.svg)](./CHANGELOG.md)
 [![npm downloads](https://img.shields.io/npm/dm/@putervision/world-model-mcp.svg)](https://www.npmjs.com/package/@putervision/world-model-mcp)
 [![CI](https://github.com/putervision/world-model-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/putervision/world-model-mcp/actions/workflows/ci.yml)
 [![Node](https://img.shields.io/badge/node-%3E%3D18.18.0-339933.svg?logo=node.js&logoColor=white)](https://nodejs.org)
@@ -50,7 +50,7 @@ world-model-mcp stats
 
 ## 🌟 Key Highlights
 
-- **🌐 Deterministic 3D/2D Spatial Memory**: Zero LLM in the loop for spatial indexing; deterministic SQLite WAL queries with FTS5 search and 3D Euclidean proximity radius lookups.
+- **🌐 Deterministic 3D/2D Spatial Memory & Compact Slices**: Zero LLM in the loop for spatial indexing; deterministic SQLite WAL queries with FTS5 search, 3D Euclidean proximity radius lookups, and sub-1KB observer-relative compact slices ($K \le 16$ nearest entities) for System 1 fast path evaluation.
 - **⚡ 15 Production-Grade Consolidated MCP Tools**: Full CRUD, topological spatial graphs (`on`, `inside`, `contains`, `near`), ray-AABB occlusion frustum culling, waypoint navigation, and time-travel rollback.
 - **⏳ Object Permanence & Decay**: Entities remain in persistent memory even when out of view, with configurable exponential confidence decay ($C = C_0 \cdot e^{-\lambda t}$) and status lifecycles (`active` → `hidden` → `lost`).
 - **🚀 Collision & Movement Simulation**: Predicts entity displacement trajectories, detects AABB obstacle collisions, and computes obstacle-avoiding navigation waypoints before actions execute.
@@ -66,7 +66,7 @@ world-model-mcp stats
 
 `@putervision/world-model-mcp` provides **15 production-grade consolidated MCP tools** organized across 5 core workflow domains:
 
-- **Spatial Memory & Search**: `update_entity` (entity CRUD, 3D bounds, properties, confidence), `query_entities` (FTS5 search, proximity radius, status/tags filter, history lookup), `set_relation` (topological graph links: `on`, `inside`, `near`, `contains`), `get_spatial_map` (JSON, GeoJSON, glTF 2.0, OBJ, summary).
+- **Spatial Memory & Search**: `update_entity` (entity CRUD, 3D bounds, properties, confidence), `query_entities` (FTS5 search, proximity radius, status/tags filter, history lookup), `set_relation` (topological graph links: `on`, `inside`, `near`, `contains`), `get_spatial_map` (JSON, GeoJSON, glTF 2.0, OBJ, summary, and `format: "compact_slice"`).
 - **Simulation & Vision Integration**: `simulate_movement` (displacement prediction, AABB collision checks, waypoint routing), `ingest_observation` (vision detection ingestion, Euclidean re-identification, frustum reconciliation), `get_expected_view` (observer pose, horizontal FOV cone, ray-AABB occlusion).
 - **Goal & State Integration**: `link_to_goal` (associate entities/regions with State Memory tasks, extract spatial context slices), `record_outcome` (record execution results, position shifts, property changes, destruction).
 - **Spatial SDD & Proofs**: `manage_spatial_spec` (register physical clearance/containment contracts, live verification scoring), `create_evidence_pack` (cryptographic SHA-256 evidence bundles linking spatial proofs to task nodes).

@@ -243,7 +243,23 @@ export function registerAllTools(server: any): void {
             }
 
             case 'get_spatial_map': {
-              if (args.format === 'summary') {
+              if (args.format === 'compact_slice') {
+                let observerParam = args.observer;
+                if (
+                  !observerParam &&
+                  (args.observer_position || args.observer_heading !== undefined)
+                ) {
+                  observerParam = {
+                    position: args.observer_position,
+                    heading: args.observer_heading,
+                  };
+                }
+                result = EntityStore.getNearestEntities(db, {
+                  project,
+                  observer: observerParam,
+                  k: args.k,
+                });
+              } else if (args.format === 'summary') {
                 result = getWorldSummary(db, { project });
               } else {
                 result = exportWorldModel(db, {
