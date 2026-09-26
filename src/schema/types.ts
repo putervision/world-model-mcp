@@ -541,4 +541,3 @@ export interface SpatialSlice {
   nearest_obstacle_distance?: number;
   spatial_hash: string; // Merkle root of active scene graph
 }
-

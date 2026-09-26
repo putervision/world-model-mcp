@@ -167,4 +167,3 @@ describe('EntityStore Comprehensive', () => {
     expect(farCoin?.bearing).toBe(-90);
   });
 });
-

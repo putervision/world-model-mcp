@@ -244,7 +244,9 @@ describe('World-Model MCP Branch Coverage Booster Suite', () => {
       expect(stats.lost_count).toBe(1);
 
       // Test getDecayStats with 0 rows
-      const emptyStats = PermanenceEngine.getDecayStats(db, { project: 'nonexistent-empty-project' });
+      const emptyStats = PermanenceEngine.getDecayStats(db, {
+        project: 'nonexistent-empty-project',
+      });
       expect(emptyStats.total_tracked).toBe(0);
       expect(emptyStats.avg_confidence).toBe(1.0);
     });

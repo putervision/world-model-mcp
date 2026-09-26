@@ -10,7 +10,6 @@ import { ValidationError } from '../utils/errors.js';
 import { sanitizeKeys } from '../utils/sanitize.js';
 import { canonicalJsonStringify } from '../utils/canonical-json.js';
 
-
 export class EntityStore {
   static addEntity(
     db: Database.Database,
@@ -579,10 +578,10 @@ export class EntityStore {
       const e = item.entity;
       const isObstacle = Boolean(
         e.properties?.is_obstacle ||
-          e.properties?.collidable ||
-          e.tags?.includes('obstacle') ||
-          e.tags?.includes('collidable') ||
-          e.type === 'obstacle'
+        e.properties?.collidable ||
+        e.tags?.includes('obstacle') ||
+        e.tags?.includes('collidable') ||
+        e.type === 'obstacle'
       );
       if (isObstacle) {
         if (nearest_obstacle_distance === undefined || item.distance < nearest_obstacle_distance) {
@@ -611,4 +610,3 @@ export class EntityStore {
     return result;
   }
 }
-
