@@ -182,18 +182,3 @@ This project uses `agent-reasoning-mcp` with project slug "world-model-mcp" to m
 - `ask_score`: Heuristic utility evaluation scoring target entities on a bounded scale (<2ms SLA).
 - `gate_intention`: Fast-path safety & feasibility filter checking preconditions before execution (<1ms SLA).
 <!-- agent-reasoning-mcp:end -->
-
-<!-- putervision-harness:start -->
-# PuterVision MCP Cluster & Harness Rules
-
-Active Supervised MCP Servers:
-* `putervision-harness`: pv-harness start --project test_slug
-* `state-memory-mcp`: state-memory-mcp 
-* `vision-memory-mcp`: vision-memory-mcp 
-* `world-model-mcp`: world-model-mcp 
-* `agent-reasoning-mcp`: agent-reasoning-mcp 
-* `behavior-mcp`: behavior-mcp 
-* `test-custom`: npx -y @org/test-custom
-
-Always use `harness_start_loop` and supervise tasks via the PuterVision Harness.
-<!-- putervision-harness:end -->
