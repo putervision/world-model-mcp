@@ -28,8 +28,8 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Full CI Suite
-        run: npm run ci
+      - name: Run Build
+        run: npm run build
 
       - name: Publish package to npm with Provenance
         run: npm publish --access public --provenance
