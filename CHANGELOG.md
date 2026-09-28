@@ -2,6 +2,13 @@
 
 All notable changes to `@putervision/world-model-mcp` will be documented in this file.
 
+## [0.5.1] - 2026-09-28
+
+### 🛠️ Glama TDQS Optimizations & MCP Annotations
+- Added `idempotentHint` and explicit `destructiveHint` annotations across tool definitions.
+- Enhanced tool descriptions with action enum definitions in the opening summary, routing guidance sentences ('Use X instead of Y when Z'), and standardized Returns blocks.
+- Preserved JSON schema action enums and synchronized package manifests and documentation.
+
 ## [0.4.0] - 2026-09-15
 
 ### 🚀 Zero-Dependency Native MCP Transport & Cross-Pentad Synchronization

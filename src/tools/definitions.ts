@@ -7,13 +7,7 @@ export const READ_ONLY_TOOLS = new Set([
   'wait_for_spatial_state',
 ]);
 
-export const DESTRUCTIVE_ACTIONS = new Set([
-  'remove_entity',
-  'remove_relation',
-  'restore_snapshot',
-  'undo',
-  'delete',
-]);
+export const DESTRUCTIVE_TOOLS = new Set(['use_spatial_blackboard', 'manage_snapshot']);
 
 export interface ToolDefinition {
   name: string;
@@ -26,7 +20,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'update_entity',
     description:
-      'Create or update an entity in the spatial world model. Allows specifying position (3D coordinates), orientation (pitch/yaw/roll), bounding box volume, custom properties, tags, and confidence score.',
+      'Create or upsert one spatial entity (position, orientation, AABB, tags, properties, confidence). Manual authoring only. ' +
+      'Omit id to create (ULID assigned). Provide id to update. Omitted fields are preserved; this is a partial merge, not a full replace. status defaults to active. confidence is 0.0–1.0 object-permanence. Does not ingest vision detections or apply action results. ' +
+      'Returns {ok, entity_id, created:boolean, entity}. ' +
+      'Use update_entity instead of ingest_observation when authoring entities directly rather than merging perception detections.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -116,7 +113,9 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'query_entities',
     description:
-      'Find entities by keyword query (FTS5 search), type, region, spatial proximity, tags, or status. Alternatively, provide entity_id for single-entity location and historical trajectory lookup.',
+      'Find entities by keyword query (FTS5 search), type, region, spatial proximity, tags, or status. Alternatively, provide entity_id for single-entity location and historical trajectory lookup. ' +
+      'Read-only. Returns {ok, count, entities[]}. ' +
+      'Use query_entities instead of get_spatial_map when searching for specific subsets rather than exporting the full topology.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -172,7 +171,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'set_relation',
     description:
-      'Record or update a spatial relationship between two entities (e.g. on, inside, next_to, above, below, near, contains, occluded_by, connected_to, facing, holding, part_of).',
+      'Record or remove a spatial relationship between two entities. Actions: add, remove. ' +
+      'Relations: on, inside, next_to, above, below, near, contains, occluded_by, connected_to, facing, holding, part_of, custom. This mutates the relation graph only, not entity poses. ' +
+      'Returns {ok, relation}. ' +
+      'Use set_relation instead of update_entity when establishing topological links (on, inside, contains) rather than setting entity coordinates.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -223,7 +225,9 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'get_spatial_map',
     description:
-      'Return a structured spatial layout, topological graph, 3D asset export (gltf/obj), or high-level environment summary of the known world.',
+      'Export the known world as json, geojson, topological_graph, gltf, obj, joint, spatial_vlm, summary, or compact_slice. Optional region_id and min_confidence filters. ' +
+      'Read-only snapshot of current SQLite state (not a live renderer). Returns the payload in requested format. ' +
+      'Use get_spatial_map instead of query_entities when exporting full environment snapshots or 3D meshes rather than filtering entities.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -270,7 +274,9 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'simulate_movement',
     description:
-      'Simulate physical movement and test for AABB collisions, or calculate waypoint navigation paths between entities and coordinates.',
+      'Predict entity trajectory, test for AABB obstacle collisions, or compute navigation waypoints (modes: simulate, navigate, waypoints). ' +
+      'Read-only simulation. Returns {ok, is_valid, destination, collisions[], waypoints[]}. ' +
+      'Use simulate_movement instead of record_outcome when testing hypothetical motion and collisions before executing an action.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -320,7 +326,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'ingest_observation',
     description:
-      'Merge structured vision perception detections into the world model (re-identifying existing objects and boosting confidence), or reconcile observed state against the expected frustum view.',
+      'Merge vision detections into the world model: re-identify by Euclidean proximity, boost confidence, and optionally reconcile against the expected frustum. ' +
+      'This is the perception writer. It may create or update entities when reconcile=true. ' +
+      'Returns {ok, matched[], created[], lost[], reconcile}. ' +
+      'Use ingest_observation instead of update_entity when merging camera or sensor perception detections rather than manual authoring.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -388,7 +397,9 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'get_expected_view',
     description:
-      "Calculate what entities should be visible from an observer's pose and field of view frustum cone.",
+      'Compute which entities should be visible from an observer pose and FOV cone, with ray-AABB occlusion. ' +
+      'Read-only. Does not write entities. Returns {visible[], occluded[], observer}. ' +
+      'Use get_expected_view instead of get_spatial_map when computing observer FOV visibility and occlusion cones rather than unfiltered world states.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -425,7 +436,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'link_to_goal',
     description:
-      'Associate entities or spatial regions with state-memory task DAGs (link/unlink), or extract goal-relevant spatial context slices.',
+      'Link or unlink entities and regions to state-memory task nodes, or extract a goal-relevant spatial slice. ' +
+      'Actions: link, unlink, get_context. link/unlink mutate association rows only. get_context is read-only. ' +
+      'Returns {ok, action, links[]|context}. ' +
+      'Use link_to_goal instead of record_outcome when associating entities with state-memory task nodes rather than recording physical movement deltas.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -466,7 +480,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'record_outcome',
     description:
-      'Update the world model after an action executes (moving an entity, modifying properties, destroying or creating objects).',
+      'Record action execution results, movement deltas, property changes, or entity destruction. ' +
+      'Not for vision ingest or manual pose edits. Mark entity destroyed via status: "destroyed". ' +
+      'Returns {ok, action_name, entity_id, delta}. ' +
+      'Use record_outcome instead of update_entity when applying executed action results and status deltas rather than hand-authoring entities.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -494,7 +511,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_spatial_spec',
     description:
-      'Manage Spatial Spec-Driven Development (Spatial SDD) baseline contracts and live compliance verification against physical constraints (min clearance, containment, occupancy).',
+      'Manage Spatial Spec-Driven Development (Spatial SDD) physical baseline contracts. ' +
+      'Actions: set (registers a baseline spec), verify (evaluates live entities against constraints without mutating), list (returns all registered specs). ' +
+      'verify is read-only. set persists constraints. Returns {ok, action, spec_id, passed:boolean, violations[]}. ' +
+      'Use manage_spatial_spec instead of update_entity when validating physical contract baselines rather than mutating live entity state.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -562,7 +582,9 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'create_evidence_pack',
     description:
-      'Package entity positions, observation reconciliations, and snapshot states into an immutable, SHA-256 hashed cryptographic evidence pack for compliance and state-memory task verification.',
+      'Package entity positions, observation reconciliations, and snapshot states into an immutable, SHA-256 hashed cryptographic evidence pack for compliance and state-memory task verification. ' +
+      'Does not change entities; hashes current proof. Returns {ok, pack_id, hash, payload}. ' +
+      'Use create_evidence_pack instead of manage_snapshot when creating immutable cryptographic verification packages rather than database checkpoints.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -601,7 +623,11 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'use_spatial_blackboard',
     description:
-      'Multi-agent shared spatial blackboard for intent publishing and claiming mutex locks. Actions: get, set, delete, lease, list (legacy: post, read, claim, release).',
+      'Publish or read multi-agent spatial coordination topics, collision alerts, and mutex region leases. ' +
+      'Actions: get, set, delete, lease, list, post, read, claim, release. ' +
+      'set writes payload (coordinates allowed for collision alerts) with optional ttl_seconds. lease acquire fails if the resource is held. delete is destructive. ' +
+      'Returns {ok, action, items[]|entry|lease}. ' +
+      'Use use_spatial_blackboard instead of set_relation when coordinating transient multi-agent collision alerts and mutex region leases.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -641,7 +667,11 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'manage_snapshot',
     description:
-      'Unified spatial snapshot and time-travel management: save checkpoints, restore states, diff two snapshots, list history, undo mutations, or inspect world state at historical timestamps.',
+      'Checkpoint, diff, undo, or time-travel the spatial world database. ' +
+      'Actions: save, restore, diff, list, undo, history, time_travel. ' +
+      'restore (overwrites live state) and undo (reverts last matching mutation) are destructive and not always reversible except by saving first. diff, list, history, and time_travel are read-only. ' +
+      'Returns {ok, action, snapshots[]|diff|state}. ' +
+      'Use manage_snapshot instead of update_entity when rolling back, diffing, or time-traveling database state rather than editing single entities.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -670,7 +700,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'generate_game_inputs',
     description:
-      'Generate Playwright MCP automation inputs (WASD, mouse-look, clicks) or project/unproject 3D entity coordinates and screen pixels.',
+      'Translate 3D navigation paths into Playwright commands (WASD/click-to-move) or project/unproject 3D coordinates and screen pixels. ' +
+      'Actions: generate_inputs, project_screen, unproject_ray. Read-only: generates Playwright inputs, does not press keys. ' +
+      'Returns {ok, action, inputs[]|screen_coords|ray}. ' +
+      'Use generate_game_inputs instead of simulate_movement when translating 3D trajectories into Playwright browser automation commands.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -819,7 +852,10 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'wait_for_spatial_state',
     description:
-      'Poll and wait until an entity reaches a specific spatial state (exists, becomes active, confidence exceeds threshold, or enters region).',
+      'Poll and wait until an entity reaches a specific spatial condition (exists, active, confidence threshold, or enters region). ' +
+      'Read-only polling tool. Default timeout: 10000ms, poll_interval: 500ms. On timeout returns {ok: false, timeout: true}. ' +
+      'Returns {ok, condition_met:boolean, entity}. ' +
+      'Use wait_for_spatial_state instead of query_entities when polling asynchronously for an entity state transition or region entry.',
     inputSchema: {
       type: 'object',
       properties: {
