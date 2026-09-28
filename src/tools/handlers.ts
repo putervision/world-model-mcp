@@ -1,5 +1,5 @@
 import { McpError, ErrorCode } from '../transport/native-mcp.js';
-import { toolDefinitions, READ_ONLY_TOOLS, DESTRUCTIVE_ACTIONS } from './definitions.js';
+import { toolDefinitions, READ_ONLY_TOOLS, DESTRUCTIVE_TOOLS } from './definitions.js';
 import { getDb, getReadOnlyDb, getProjectSlug } from '../engine/db.js';
 import { EntityStore } from '../engine/entity-store.js';
 import { SpatialGraph } from '../engine/spatial-graph.js';
@@ -103,12 +103,9 @@ function warnDeprecatedSpatialBlackboardAction(action: string, canonical: string
 export function registerAllTools(server: any): void {
   for (const toolDef of toolDefinitions) {
     const isReadOnly = READ_ONLY_TOOLS.has(toolDef.name);
-    const isDestructive = DESTRUCTIVE_ACTIONS.has(toolDef.name);
+    const isDestructive = DESTRUCTIVE_TOOLS.has(toolDef.name);
 
     const effectiveSchema = JSON.parse(JSON.stringify(toolDef.inputSchema));
-    if (effectiveSchema.properties?.action) {
-      delete effectiveSchema.properties.action.enum;
-    }
 
     server.registerTool(
       toolDef.name,
