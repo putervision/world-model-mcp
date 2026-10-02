@@ -33,6 +33,16 @@ export type EntityType =
   | 'obstacle'
   | 'custom';
 
+// Affordance Bitmask for zero-LLM physical interaction checks
+export enum AffordanceBitmask {
+  NONE = 0,
+  TRAVERSABLE = 1 << 0, // 1
+  OCCLUDER = 1 << 1,    // 2
+  CONTAINER = 1 << 2,   // 4
+  INTERACTABLE = 1 << 3,// 8
+  THREAT = 1 << 4,      // 16
+}
+
 // Entity Status
 export type EntityStatus = 'active' | 'hidden' | 'lost' | 'destroyed';
 
@@ -75,6 +85,8 @@ export interface Entity {
   position?: Vector3D;
   orientation?: Orientation3D;
   bounding_box?: BoundingBoxSize;
+  velocity?: Vector3D;
+  affordance_mask?: number;
   confidence: number;
   parent_id?: string;
   region_id?: string;
@@ -172,6 +184,7 @@ export interface BlackboardItem {
   payload: Record<string, unknown>;
   claimed_by?: string;
   claimed_until?: string;
+  intention_id?: string;
   expires_at?: string;
   created_at: string;
 }
@@ -296,6 +309,9 @@ export interface GoalLink {
   region_id?: string;
   relationship: GoalRelationshipType;
   notes?: string;
+  target_entity_id?: string;
+  success_region?: { min: Vector3D; max: Vector3D };
+  min_clearance?: number;
   created_at: string;
 }
 
@@ -355,6 +371,10 @@ export interface EntityRow {
   x: number | null;
   y: number | null;
   z: number | null;
+  vx?: number | null;
+  vy?: number | null;
+  vz?: number | null;
+  affordance_mask?: number | null;
   pitch: number | null;
   yaw: number | null;
   roll: number | null;
@@ -370,6 +390,46 @@ export interface EntityRow {
   created_at: string;
   updated_at: string;
   version: number;
+}
+
+export interface GoalLinkRow {
+  id: string;
+  project: string;
+  task_id: string;
+  entity_id: string | null;
+  region_id: string | null;
+  relationship: string;
+  notes: string | null;
+  target_entity_id: string | null;
+  success_region_json: string | null;
+  min_clearance: number | null;
+  created_at: string;
+}
+
+export interface SpooledOutcome {
+  id: string;
+  project: string;
+  session_id?: string;
+  leaf?: string;
+  status: string;
+  result?: Record<string, unknown>;
+  pack_hash?: string;
+  token_id?: string;
+  error?: string;
+  created_at: string;
+}
+
+export interface SpooledOutcomeRow {
+  id: string;
+  project: string;
+  session_id: string | null;
+  leaf: string | null;
+  status: string;
+  result_json: string | null;
+  pack_hash: string | null;
+  token_id: string | null;
+  error: string | null;
+  created_at: string;
 }
 
 export interface RelationRow {
@@ -529,6 +589,24 @@ export interface GameInputSequence {
   powershell_script?: string;
 }
 
+export interface SpatialPredicatePack {
+  relative_bearing: number;
+  occlusion_flag: boolean;
+  nearest_obstacle_distance: number;
+  collision_imminent: boolean;
+  clearance_to_linked_goal: number | null;
+  feature_density: number;
+  spooled_outcomes_count?: number;
+}
+
+export interface ExpectedReentryEntity {
+  id: string;
+  name: string;
+  predicted_position: Vector3D;
+  estimated_reentry_ms: number;
+  distance: number;
+}
+
 export interface SpatialSlice {
   observer_position?: [number, number, number];
   visible_entities: Array<{
@@ -540,4 +618,5 @@ export interface SpatialSlice {
   }>;
   nearest_obstacle_distance?: number;
   spatial_hash: string; // Merkle root of active scene graph
+  predicates?: SpatialPredicatePack;
 }

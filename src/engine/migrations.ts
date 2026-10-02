@@ -265,6 +265,55 @@ export const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 3,
+    name: 'predictive_permanence_affordance_spool',
+    up: (db: Database.Database) => {
+      // 1. Velocity and Affordance Bitmask columns on entities
+      try {
+        db.exec(`ALTER TABLE entities ADD COLUMN vx REAL DEFAULT 0.0;`);
+      } catch {}
+      try {
+        db.exec(`ALTER TABLE entities ADD COLUMN vy REAL DEFAULT 0.0;`);
+      } catch {}
+      try {
+        db.exec(`ALTER TABLE entities ADD COLUMN vz REAL DEFAULT 0.0;`);
+      } catch {}
+      try {
+        db.exec(`ALTER TABLE entities ADD COLUMN affordance_mask INTEGER DEFAULT 0;`);
+      } catch {}
+
+      // 2. Goal Link enhancements (target entity, success region, min clearance)
+      try {
+        db.exec(`ALTER TABLE goal_links ADD COLUMN target_entity_id TEXT;`);
+      } catch {}
+      try {
+        db.exec(`ALTER TABLE goal_links ADD COLUMN success_region_json TEXT;`);
+      } catch {}
+      try {
+        db.exec(`ALTER TABLE goal_links ADD COLUMN min_clearance REAL;`);
+      } catch {}
+
+      // 3. Spooled Outcomes table for 60Hz loop off-tick ingestion
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS spooled_outcomes (
+          id TEXT PRIMARY KEY,
+          project TEXT NOT NULL,
+          session_id TEXT,
+          leaf TEXT,
+          status TEXT NOT NULL,
+          result_json TEXT,
+          pack_hash TEXT,
+          token_id TEXT,
+          error TEXT,
+          created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_spooled_outcomes_project ON spooled_outcomes(project);
+        CREATE INDEX IF NOT EXISTS idx_spooled_outcomes_session ON spooled_outcomes(project, session_id);
+        CREATE INDEX IF NOT EXISTS idx_spooled_outcomes_pack_hash ON spooled_outcomes(project, pack_hash);
+      `);
+    },
+  },
 ];
 
 export function runMigrations(db: Database.Database): void {

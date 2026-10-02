@@ -81,6 +81,20 @@ export const toolDefinitions: ToolDefinition[] = [
           },
           description: 'AABB bounding volume size',
         },
+        velocity: {
+          type: 'object',
+          properties: {
+            x: { type: 'number', description: 'Velocity along X axis' },
+            y: { type: 'number', description: 'Velocity along Y axis' },
+            z: { type: 'number', description: 'Velocity along Z axis' },
+          },
+          description: '3D velocity vector (vx, vy, vz) for physical motion and predictive permanence',
+        },
+        affordance_mask: {
+          type: 'number',
+          description:
+            'Bitmask of physical interaction affordances (1=traversable, 2=occluder, 4=container, 8=interactable, 16=threat)',
+        },
         confidence: {
           type: 'number',
           description: 'Object permanence confidence score from 0.0 to 1.0 (default: 1.0)',
@@ -451,6 +465,10 @@ export const toolDefinitions: ToolDefinition[] = [
         },
         task_id: { type: 'string', description: 'State memory task node ID' },
         entity_id: { type: 'string', description: 'Target entity ID to link/unlink' },
+        target_entity_id: {
+          type: 'string',
+          description: 'Direct target entity ID for navigation and clearance tracking',
+        },
         region_id: { type: 'string', description: 'Target region ID to link' },
         relationship: {
           type: 'string',
@@ -458,6 +476,24 @@ export const toolDefinitions: ToolDefinition[] = [
           description: 'Role of entity relative to goal (default: target)',
         },
         notes: { type: 'string', description: 'Context notes' },
+        success_region: {
+          type: 'object',
+          properties: {
+            min: {
+              type: 'object',
+              properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+            },
+            max: {
+              type: 'object',
+              properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+            },
+          },
+          description: 'Spatial bounding volume region defining goal arrival',
+        },
+        min_clearance: {
+          type: 'number',
+          description: 'Minimum clearance distance required to satisfy the goal',
+        },
         current_agent_position: {
           type: 'object',
           properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
@@ -480,13 +516,19 @@ export const toolDefinitions: ToolDefinition[] = [
   {
     name: 'record_outcome',
     description:
-      'Record action execution results, movement deltas, property changes, or entity destruction. ' +
+      'Record action execution results, movement deltas, property changes, entity destruction, or spool outcome ingestion from 60Hz loop. ' +
       'Not for vision ingest or manual pose edits. Mark entity destroyed via status: "destroyed". ' +
-      'Returns {ok, action_name, entity_id, delta}. ' +
+      'Returns {ok, action, success:boolean, ...}. ' +
       'Use record_outcome instead of update_entity when applying executed action results and status deltas rather than hand-authoring entities.',
     inputSchema: {
       type: 'object',
       properties: {
+        action: {
+          type: 'string',
+          enum: ['record', 'from_tick'],
+          description:
+            'Action type: "record" (default) for single outcome or "from_tick" for 60Hz batch spool ingestion',
+        },
         action_name: {
           type: 'string',
           description: 'Name of the executed action (e.g. move_to, pickup, place, destroy)',
@@ -498,12 +540,30 @@ export const toolDefinitions: ToolDefinition[] = [
           properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
           description: 'New position of entity after action',
         },
+        resulting_velocity: {
+          type: 'object',
+          properties: { x: { type: 'number' }, y: { type: 'number' }, z: { type: 'number' } },
+          description: 'New velocity vector of entity after action',
+        },
+        affordance_mask: {
+          type: 'number',
+          description: 'Updated affordance bitmask after action',
+        },
         property_changes: { type: 'object', description: 'Updated properties to merge' },
         destroyed: { type: 'boolean', description: 'If true, marks entity as destroyed' },
         task_id: { type: 'string', description: 'Linked task ID' },
+        spooled_outcomes: {
+          type: 'array',
+          items: { type: 'object' },
+          description: 'Batch of spooled outcomes to ingest from 60Hz loop off-tick execution',
+        },
+        items: {
+          type: 'array',
+          items: { type: 'object' },
+          description: 'Alias for spooled_outcomes batch array',
+        },
         project: { type: 'string', description: 'Optional project identifier' },
       },
-      required: ['action_name', 'success'],
     },
   },
 
@@ -655,6 +715,11 @@ export const toolDefinitions: ToolDefinition[] = [
           description: 'Lease duration in seconds (default: 60)',
         },
         ttl_seconds: { type: 'number', description: 'Post TTL expiration in seconds' },
+        intention_id: {
+          type: 'string',
+          description:
+            'Cross-server intention identifier from agent-reasoning-mcp to bind execution directives',
+        },
         limit: { type: 'number', description: 'Maximum number of items or topics to return' },
         include_expired: { type: 'boolean', description: 'Whether to include expired entries' },
         topic_prefix: { type: 'string', description: 'Prefix filter for listing topics' },

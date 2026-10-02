@@ -14,6 +14,7 @@ export class SpatialBlackboard {
       sender: string;
       payload: Record<string, any>;
       ttl_seconds?: number;
+      intention_id?: string;
     }
   ): { item: BlackboardItem; collision_warnings?: string[] } {
     const id = generateId();
@@ -24,11 +25,16 @@ export class SpatialBlackboard {
       expiresAt = new Date(Date.now() + params.ttl_seconds * 1000).toISOString();
     }
 
+    const payload = { ...params.payload };
+    if (params.intention_id && !payload.intention_id) {
+      payload.intention_id = params.intention_id;
+    }
+
     // Collision intent check if spatial coordinates are present in payload
     const collisionWarnings: string[] = [];
-    const targetPos = (params.payload.position ||
-      params.payload.destination ||
-      params.payload.target_coords) as Vector3D | undefined;
+    const targetPos = (payload.position ||
+      payload.destination ||
+      payload.target_coords) as Vector3D | undefined;
 
     if (targetPos && typeof targetPos.x === 'number') {
       const activeItems = this.read(db, { project: params.project, include_expired: false });
@@ -62,7 +68,7 @@ export class SpatialBlackboard {
       params.project,
       params.topic,
       params.sender,
-      JSON.stringify(params.payload),
+      JSON.stringify(payload),
       null,
       null,
       expiresAt || null,
@@ -74,7 +80,8 @@ export class SpatialBlackboard {
       project: params.project,
       topic: params.topic,
       sender: params.sender,
-      payload: params.payload,
+      payload,
+      intention_id: params.intention_id,
       expires_at: expiresAt,
       created_at: now,
     };
@@ -93,6 +100,7 @@ export class SpatialBlackboard {
       sender: string;
       payload: Record<string, any>;
       ttl_seconds?: number;
+      intention_id?: string;
     }
   ): { item: BlackboardItem; collision_warnings?: string[] } {
     return this.post(db, params);
@@ -159,8 +167,9 @@ export class SpatialBlackboard {
       agent_id: string;
       duration_seconds?: number;
       mode?: 'acquire' | 'release';
+      intention_id?: string;
     }
-  ): { success: boolean; message: string; expires_at?: string } {
+  ): { success: boolean; message: string; expires_at?: string; intention_id?: string } {
     if (params.mode === 'release') {
       return this.release(db, {
         project: params.project,
@@ -173,6 +182,7 @@ export class SpatialBlackboard {
       resource_id: params.resource_id,
       agent_id: params.agent_id,
       duration_seconds: params.duration_seconds,
+      intention_id: params.intention_id,
     });
   }
 
@@ -230,17 +240,21 @@ export class SpatialBlackboard {
 
     const rows = db.prepare(query).all(...queryParams) as BlackboardItemRow[];
 
-    return rows.map((r) => ({
-      id: r.id,
-      project: r.project,
-      topic: r.topic,
-      sender: r.sender,
-      payload: safeJsonParse(r.payload_json || '{}', {}),
-      claimed_by: r.claimed_by || undefined,
-      claimed_until: r.claimed_until || undefined,
-      expires_at: r.expires_at || undefined,
-      created_at: r.created_at,
-    }));
+    return rows.map((r) => {
+      const payload = safeJsonParse(r.payload_json || '{}', {});
+      return {
+        id: r.id,
+        project: r.project,
+        topic: r.topic,
+        sender: r.sender,
+        payload,
+        claimed_by: r.claimed_by || undefined,
+        claimed_until: r.claimed_until || undefined,
+        intention_id: (payload as any).intention_id || undefined,
+        expires_at: r.expires_at || undefined,
+        created_at: r.created_at,
+      };
+    });
   }
 
   static claim(
@@ -250,8 +264,9 @@ export class SpatialBlackboard {
       resource_id: string;
       agent_id: string;
       duration_seconds?: number;
+      intention_id?: string;
     }
-  ): { success: boolean; message: string; expires_at?: string } {
+  ): { success: boolean; message: string; expires_at?: string; intention_id?: string } {
     const topic = `claim:${params.resource_id}`;
     const now = getCurrentIsoString();
     const duration = params.duration_seconds || 60;
@@ -275,6 +290,14 @@ export class SpatialBlackboard {
       topic
     );
 
+    const claimPayload: Record<string, any> = {
+      resource_id: params.resource_id,
+      status: 'claimed',
+    };
+    if (params.intention_id) {
+      claimPayload.intention_id = params.intention_id;
+    }
+
     const id = generateId();
     db.prepare(
       `
@@ -287,7 +310,7 @@ export class SpatialBlackboard {
       params.project,
       topic,
       params.agent_id,
-      JSON.stringify({ resource_id: params.resource_id, status: 'claimed' }),
+      JSON.stringify(claimPayload),
       params.agent_id,
       expiresAt,
       expiresAt,
@@ -298,6 +321,7 @@ export class SpatialBlackboard {
       success: true,
       message: `Resource "${params.resource_id}" successfully claimed by agent "${params.agent_id}" for ${duration}s.`,
       expires_at: expiresAt,
+      intention_id: params.intention_id,
     };
   }
 

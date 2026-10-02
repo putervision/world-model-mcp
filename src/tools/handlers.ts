@@ -20,6 +20,7 @@ import { waitForSpatialState } from '../engine/polling.js';
 import { SchemaAdvisor } from '../engine/advisor.js';
 import { worldToScreen, screenToWorldRay } from '../utils/projection.js';
 import { GameControlsEngine } from '../engine/game-controls.js';
+import { SpoolEngine } from '../engine/spool.js';
 import { z, Schema, ObjectSchema } from '../schema/schemas.js';
 
 interface JsonSchemaProperty {
@@ -149,6 +150,8 @@ export function registerAllTools(server: any): void {
                   position: args.position,
                   orientation: args.orientation,
                   bounding_box: args.bounding_box,
+                  velocity: args.velocity,
+                  affordance_mask: args.affordance_mask,
                   confidence: args.confidence,
                   parent_id: args.parent_id,
                   region_id: args.region_id,
@@ -165,6 +168,8 @@ export function registerAllTools(server: any): void {
                   position: args.position,
                   orientation: args.orientation,
                   bounding_box: args.bounding_box,
+                  velocity: args.velocity,
+                  affordance_mask: args.affordance_mask,
                   confidence: args.confidence ?? 1.0,
                   parent_id: args.parent_id,
                   region_id: args.region_id,
@@ -370,34 +375,66 @@ export function registerAllTools(server: any): void {
                   region_id: args.region_id,
                   relationship: args.relationship || 'target',
                   notes: args.notes,
+                  target_entity_id: args.target_entity_id,
+                  success_region: args.success_region,
+                  min_clearance: args.min_clearance,
                 });
               }
               break;
             }
 
             case 'record_outcome': {
-              if (args.destroyed && args.entity_id) {
+              if (
+                args.action === 'from_tick' ||
+                args.spooled_outcomes ||
+                (args.items && Array.isArray(args.items))
+              ) {
+                const items = args.spooled_outcomes || args.items || [];
+                const spoolRes = SpoolEngine.ingestSpooledOutcomes(db, { project, items });
+                result = {
+                  action: 'from_tick',
+                  success: true,
+                  ingested: spoolRes.ingested,
+                  total_spooled: spoolRes.total_spooled,
+                  recorded_at: new Date().toISOString(),
+                };
+              } else if (args.destroyed && args.entity_id) {
                 EntityStore.removeEntity(db, {
                   project,
                   id: args.entity_id,
                   source: 'record_outcome',
                 });
+                result = {
+                  action: args.action_name || 'destroy',
+                  success: args.success ?? true,
+                  entity_id: args.entity_id,
+                  recorded_at: new Date().toISOString(),
+                };
               } else if (args.entity_id) {
                 EntityStore.updateEntity(db, {
                   project,
                   id: args.entity_id,
                   position: args.resulting_position,
+                  velocity: args.resulting_velocity || args.velocity,
+                  affordance_mask: args.affordance_mask,
                   properties: args.property_changes,
                   task_id: args.task_id,
                   source: 'record_outcome',
                 });
+                result = {
+                  action: args.action_name,
+                  success: args.success,
+                  entity_id: args.entity_id,
+                  recorded_at: new Date().toISOString(),
+                };
+              } else {
+                result = {
+                  action: args.action_name,
+                  success: args.success,
+                  entity_id: args.entity_id,
+                  recorded_at: new Date().toISOString(),
+                };
               }
-              result = {
-                action: args.action_name,
-                success: args.success,
-                entity_id: args.entity_id,
-                recorded_at: new Date().toISOString(),
-              };
               break;
             }
 
@@ -446,6 +483,7 @@ export function registerAllTools(server: any): void {
                   sender: args.sender || args.agent_id || 'agent',
                   payload: args.payload || {},
                   ttl_seconds: args.ttl_seconds,
+                  intention_id: args.intention_id,
                 });
               } else if (action === 'post') {
                 warnDeprecatedSpatialBlackboardAction('post', 'set');
@@ -455,6 +493,7 @@ export function registerAllTools(server: any): void {
                   sender: args.sender || args.agent_id || 'agent',
                   payload: args.payload || {},
                   ttl_seconds: args.ttl_seconds,
+                  intention_id: args.intention_id,
                 });
               } else if (action === 'get') {
                 result = SpatialBlackboard.get(db, {
@@ -486,6 +525,7 @@ export function registerAllTools(server: any): void {
                   agent_id: args.agent_id || args.sender || 'agent',
                   duration_seconds: args.duration_seconds,
                   mode: args.mode,
+                  intention_id: args.intention_id,
                 });
               } else if (action === 'claim') {
                 warnDeprecatedSpatialBlackboardAction('claim', 'lease');
@@ -494,6 +534,7 @@ export function registerAllTools(server: any): void {
                   resource_id: args.resource_id,
                   agent_id: args.agent_id || args.sender || 'agent',
                   duration_seconds: args.duration_seconds,
+                  intention_id: args.intention_id,
                 });
               } else if (action === 'release') {
                 warnDeprecatedSpatialBlackboardAction('release', 'lease');

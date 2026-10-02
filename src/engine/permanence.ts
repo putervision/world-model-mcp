@@ -3,6 +3,31 @@ import { Entity } from '../schema/types.js';
 import { parseEntityRow } from './row-mappers.js';
 import { getCurrentIsoString } from '../utils/time.js';
 import { logEntityEvent } from './events.js';
+import {
+  Vector3D,
+  vec3Add,
+  vec3Scale,
+  vec3Length,
+  vec3Normalize,
+  aabbFromCenterSize,
+  aabbContainsPoint,
+  rayAabbIntersect,
+} from '../utils/math.js';
+
+export interface ExtrapolatePositionOptions {
+  damping?: number; // gamma in e^(-gamma * t), default 0.1
+  clampObstacles?: boolean; // default true
+  maxElapsedSeconds?: number; // default 10.0s (zero velocity if elapsed > 10s)
+}
+
+export interface ExtrapolatedEntityPosition {
+  entity_id: string;
+  original_position: Vector3D;
+  extrapolated_position: Vector3D;
+  velocity: Vector3D;
+  elapsed_seconds: number;
+  clamped: boolean;
+}
 
 export class PermanenceEngine {
   /**
@@ -149,5 +174,130 @@ export class PermanenceEngine {
       destroyed_count: destroyed,
       avg_confidence: rows.length > 0 ? totalConf / rows.length : 1.0,
     };
+  }
+
+  /**
+   * Extrapolates an entity's 3D position using velocity and exponential damping p(t) = p0 + v * dt * e^(-gamma * dt).
+   * Clamps against static obstacle AABBs.
+   * If elapsed time exceeds maxElapsedSeconds (default 10s), velocity is zeroed.
+   */
+  static extrapolateEntityPosition(
+    entity: Entity,
+    targetTimeIso?: string,
+    obstacles: Entity[] = [],
+    options: ExtrapolatePositionOptions = {}
+  ): ExtrapolatedEntityPosition {
+    const p0 = entity.position ?? { x: 0, y: 0, z: 0 };
+    const v = entity.velocity ?? { x: 0, y: 0, z: 0 };
+    const maxElapsed = options.maxElapsedSeconds ?? 10.0;
+    const damping = options.damping ?? 0.1;
+    const clampObstacles = options.clampObstacles ?? true;
+
+    if (!entity.position || (v.x === 0 && v.y === 0 && v.z === 0)) {
+      return {
+        entity_id: entity.id,
+        original_position: p0,
+        extrapolated_position: p0,
+        velocity: v,
+        elapsed_seconds: 0,
+        clamped: false,
+      };
+    }
+
+    const lastTime = new Date(entity.updated_at || entity.last_seen_at).getTime();
+    const targetTime = targetTimeIso ? new Date(targetTimeIso).getTime() : Date.now();
+    const elapsedSeconds = Math.max(0, (targetTime - lastTime) / 1000);
+
+    // If entity was updated more than maxElapsed (10s) ago, zero out velocity
+    if (elapsedSeconds <= 0 || elapsedSeconds > maxElapsed) {
+      return {
+        entity_id: entity.id,
+        original_position: p0,
+        extrapolated_position: p0,
+        velocity: elapsedSeconds > maxElapsed ? { x: 0, y: 0, z: 0 } : v,
+        elapsed_seconds: elapsedSeconds,
+        clamped: false,
+      };
+    }
+
+    // p(t) = p0 + v * dt * e^(-gamma * dt)
+    const decayFactor = Math.exp(-damping * elapsedSeconds);
+    const displacement: Vector3D = {
+      x: v.x * elapsedSeconds * decayFactor,
+      y: v.y * elapsedSeconds * decayFactor,
+      z: v.z * elapsedSeconds * decayFactor,
+    };
+
+    let pTarget: Vector3D = vec3Add(p0, displacement);
+    let clamped = false;
+
+    if (clampObstacles && obstacles.length > 0) {
+      const dispLen = vec3Length(displacement);
+      if (dispLen > 0.0001) {
+        const dir = vec3Normalize(displacement);
+        let nearestHitDist = Infinity;
+
+        for (const obs of obstacles) {
+          if (obs.id === entity.id || !obs.position || !obs.bounding_box) continue;
+          const isObstacle = Boolean(
+            obs.type === 'obstacle' ||
+            obs.properties?.collidable ||
+            obs.properties?.is_solid ||
+            (obs.affordance_mask && (obs.affordance_mask & 16 || obs.affordance_mask & 2))
+          );
+          if (!isObstacle && obs.type !== 'obstacle') continue;
+
+          const box = aabbFromCenterSize(obs.position, obs.bounding_box);
+          if (aabbContainsPoint(box, pTarget)) {
+            clamped = true;
+          }
+
+          const hit = rayAabbIntersect(p0, dir, box, dispLen);
+          if (hit.hit && hit.t < nearestHitDist && hit.t <= dispLen) {
+            nearestHitDist = hit.t;
+            clamped = true;
+          }
+        }
+
+        if (clamped && nearestHitDist < Infinity) {
+          const safeDist = Math.max(0, nearestHitDist - 0.05);
+          pTarget = vec3Add(p0, vec3Scale(dir, safeDist));
+        }
+      }
+    }
+
+    return {
+      entity_id: entity.id,
+      original_position: p0,
+      extrapolated_position: pTarget,
+      velocity: v,
+      elapsed_seconds: elapsedSeconds,
+      clamped,
+    };
+  }
+
+  /**
+   * Extrapolates all active entities in a project with velocity vectors.
+   */
+  static extrapolateAllActive(
+    db: Database.Database,
+    params: { project: string; target_time_iso?: string; options?: ExtrapolatePositionOptions }
+  ): ExtrapolatedEntityPosition[] {
+    const rows = db
+      .prepare("SELECT * FROM entities WHERE project = ? AND status = 'active'")
+      .all(params.project) as any[];
+
+    const allEntities = rows.map((r) => parseEntityRow(r));
+    const obstacles = allEntities.filter(
+      (e) =>
+        e.type === 'obstacle' ||
+        e.properties?.collidable ||
+        e.properties?.is_solid ||
+        (e.affordance_mask && (e.affordance_mask & 16 || e.affordance_mask & 2))
+    );
+
+    return allEntities.map((e) =>
+      PermanenceEngine.extrapolateEntityPosition(e, params.target_time_iso, obstacles, params.options)
+    );
   }
 }

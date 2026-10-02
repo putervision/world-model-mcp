@@ -27,6 +27,13 @@ export function parseEntityRow(row: EntityRow): Entity {
       row.bbox_width !== null && row.bbox_height !== null && row.bbox_depth !== null
         ? { width: row.bbox_width, height: row.bbox_height, depth: row.bbox_depth }
         : undefined,
+    velocity:
+      row.vx !== null && row.vx !== undefined &&
+      row.vy !== null && row.vy !== undefined &&
+      row.vz !== null && row.vz !== undefined
+        ? { x: row.vx, y: row.vy, z: row.vz }
+        : undefined,
+    affordance_mask: row.affordance_mask ?? 0,
     confidence: row.confidence ?? 1.0,
     parent_id: row.parent_id ?? undefined,
     region_id: row.region_id ?? undefined,
