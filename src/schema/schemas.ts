@@ -381,3 +381,13 @@ export const TilemapConfigSchema = z.object({
   origin_x: z.number().default(0),
   origin_y: z.number().default(0),
 });
+
+export const SpatialPredicatePackSchema = z.object({
+  relative_bearing: z.number().default(0),
+  occlusion_flag: z.boolean().default(false),
+  nearest_obstacle_distance: z.number().default(999),
+  collision_imminent: z.boolean().default(false),
+  clearance_to_linked_goal: z.number().optional(),
+  feature_density: z.number().default(0),
+  spooled_outcomes_count: z.number().optional(),
+});

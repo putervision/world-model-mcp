@@ -26,6 +26,7 @@ export { waitForSpatialState } from "./engine/polling.js";
 export { SchemaAdvisor } from "./engine/advisor.js";
 export { GameControlsEngine } from "./engine/game-controls.js";
 export { getBridgeScript } from "./browser/threejs-bridge.js";
+export { SpoolEngine } from "./engine/spool.js";
 
 // Database & Scaffolding
 export { getDb, getReadOnlyDb, closeDb, closeAllDbs, getProjectSlug, registerProject, resolveProjectRoot } from "./engine/db.js";

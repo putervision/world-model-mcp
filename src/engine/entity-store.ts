@@ -1,6 +1,13 @@
 import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
-import { Entity, EntityRow, EntityType, EntityStatus, SpatialSlice } from '../schema/types.js';
+import {
+  Entity,
+  EntityRow,
+  EntityType,
+  EntityStatus,
+  SpatialSlice,
+  SpatialPredicatePack,
+} from '../schema/types.js';
 import { parseEntityRow } from './row-mappers.js';
 import { generateId } from '../utils/id.js';
 import { getCurrentIsoString } from '../utils/time.js';
@@ -22,6 +29,8 @@ export class EntityStore {
       position?: Vector3D;
       orientation?: Orientation3D;
       bounding_box?: BoundingBoxSize;
+      velocity?: Vector3D;
+      affordance_mask?: number;
       confidence?: number;
       parent_id?: string;
       region_id?: string;
@@ -47,13 +56,14 @@ export class EntityStore {
       params.confidence !== undefined ? Math.max(0, Math.min(1, params.confidence)) : 1.0;
     const properties = sanitizeKeys(params.properties || {});
     const tags = params.tags || [];
+    const affordance_mask = params.affordance_mask ?? 0;
 
     const stmt = db.prepare(`
       INSERT INTO entities (
-        id, project, name, type, status, x, y, z, pitch, yaw, roll,
+        id, project, name, type, status, x, y, z, vx, vy, vz, affordance_mask, pitch, yaw, roll,
         bbox_width, bbox_height, bbox_depth, confidence, parent_id, region_id,
         properties_json, tags_json, last_seen_at, created_at, updated_at, version
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         type = excluded.type,
@@ -61,6 +71,10 @@ export class EntityStore {
         x = excluded.x,
         y = excluded.y,
         z = excluded.z,
+        vx = excluded.vx,
+        vy = excluded.vy,
+        vz = excluded.vz,
+        affordance_mask = excluded.affordance_mask,
         pitch = excluded.pitch,
         yaw = excluded.yaw,
         roll = excluded.roll,
@@ -87,6 +101,10 @@ export class EntityStore {
         params.position?.x ?? null,
         params.position?.y ?? null,
         params.position?.z ?? null,
+        params.velocity?.x ?? null,
+        params.velocity?.y ?? null,
+        params.velocity?.z ?? null,
+        affordance_mask,
         params.orientation?.pitch ?? null,
         params.orientation?.yaw ?? null,
         params.orientation?.roll ?? null,
@@ -147,6 +165,8 @@ export class EntityStore {
       position?: Vector3D;
       orientation?: Orientation3D;
       bounding_box?: BoundingBoxSize;
+      velocity?: Vector3D;
+      affordance_mask?: number;
       confidence?: number;
       parent_id?: string;
       region_id?: string;
@@ -172,6 +192,11 @@ export class EntityStore {
 
     const now = getCurrentIsoString();
     const updatedPos = params.position !== undefined ? params.position : current.position;
+    const updatedVel = params.velocity !== undefined ? params.velocity : current.velocity;
+    const updatedAffordance =
+      params.affordance_mask !== undefined
+        ? params.affordance_mask
+        : (current.affordance_mask ?? 0);
     const updatedOrient =
       params.orientation !== undefined ? params.orientation : current.orientation;
     const updatedBbox =
@@ -206,6 +231,10 @@ export class EntityStore {
           x = ?,
           y = ?,
           z = ?,
+          vx = ?,
+          vy = ?,
+          vz = ?,
+          affordance_mask = ?,
           pitch = ?,
           yaw = ?,
           roll = ?,
@@ -229,6 +258,10 @@ export class EntityStore {
         updatedPos?.x ?? null,
         updatedPos?.y ?? null,
         updatedPos?.z ?? null,
+        updatedVel?.x ?? null,
+        updatedVel?.y ?? null,
+        updatedVel?.z ?? null,
+        updatedAffordance,
         updatedOrient?.pitch ?? null,
         updatedOrient?.yaw ?? null,
         updatedOrient?.roll ?? null,
@@ -600,13 +633,84 @@ export class EntityStore {
       .update(canonicalJsonStringify(sortedSummary))
       .digest('hex');
 
+    const nearestObstacleDist =
+      nearest_obstacle_distance !== undefined ? nearest_obstacle_distance : 999.0;
+    const collisionImminent =
+      nearest_obstacle_distance !== undefined && nearest_obstacle_distance < 1.0;
+
+    let occlusionFlag = false;
+    if (visible_entities.length > 0 && nearest_obstacle_distance !== undefined) {
+      if (nearest_obstacle_distance < visible_entities[0].distance) {
+        occlusionFlag = true;
+      }
+    }
+
+    let clearanceToLinkedGoal: number | null = null;
+    try {
+      const goalLink = db
+        .prepare('SELECT * FROM goal_links WHERE project = ? ORDER BY created_at DESC LIMIT 1')
+        .get(params.project) as any;
+      if (goalLink) {
+        const targetId = goalLink.target_entity_id || goalLink.entity_id;
+        if (targetId) {
+          const targetEntity = allEntities.find((e) => e.id === targetId);
+          if (targetEntity && targetEntity.position && hasObserver) {
+            const dx = targetEntity.position.x - x0;
+            const dy = targetEntity.position.y - y0;
+            const dz = targetEntity.position.z - z0;
+            const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            clearanceToLinkedGoal = Math.round(dist * 1000) / 1000;
+          }
+        }
+      }
+    } catch {}
+
+    let spooledOutcomesCount = 0;
+    try {
+      const row = db
+        .prepare('SELECT COUNT(*) as c FROM spooled_outcomes WHERE project = ?')
+        .get(params.project) as { c: number } | undefined;
+      if (row) spooledOutcomesCount = row.c;
+    } catch {}
+
+    const predicates: SpatialPredicatePack = {
+      relative_bearing: visible_entities[0]?.bearing ?? 0,
+      occlusion_flag: occlusionFlag,
+      nearest_obstacle_distance: nearestObstacleDist,
+      collision_imminent: collisionImminent,
+      clearance_to_linked_goal: clearanceToLinkedGoal,
+      feature_density: positionedEntities.length,
+      spooled_outcomes_count: spooledOutcomesCount,
+    };
+
     const result: SpatialSlice = {
       observer_position: hasObserver ? [x0, y0, z0] : undefined,
       visible_entities,
       nearest_obstacle_distance,
       spatial_hash,
+      predicates,
     };
 
     return result;
+  }
+
+  static getCompactSlice(
+    db: Database.Database,
+    params: {
+      project: string;
+      observer?:
+        | {
+            x?: number;
+            y?: number;
+            z?: number;
+            heading?: number;
+            position?: Vector3D | [number, number, number];
+          }
+        | [number, number, number]
+        | Vector3D;
+      k?: number;
+    }
+  ): SpatialSlice {
+    return EntityStore.getNearestEntities(db, params);
   }
 }

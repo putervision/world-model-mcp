@@ -2,6 +2,15 @@
 
 All notable changes to `@putervision/world-model-mcp` will be documented in this file.
 
+## [0.6.0] - 2026-10-02
+
+### 🚀 Affordance Bitmasks, Velocity Tracking & Spatial Slices
+- **Affordance Bitmasks**: Added formal bitmask definitions (`TRAVERSABLE: 1`, `OCCLUDER: 2`, `CONTAINER: 4`, `INTERACTABLE: 8`, `THREAT: 16`) for entities in schema and SQLite storage.
+- **Dynamic Velocity Vectors**: Added 3D velocity vectors (`vx`, `vy`, `vz`) and linear speed calculation in entity schemas and migrations.
+- **Structured Spatial Slices**: Added `get_spatial_map(format: 'slice')` producing lightweight, self-contained spatial slices with observer pose, nearby entities, affordance summaries, and expiration metadata.
+- **Spatial Collision Rollout**: Added physics-aware collision testing considering obstacle clearance thresholds and affordances in `simulate_movement`.
+- **Manifest Synchronization**: Synchronized package manifests, bumped version to 0.6.0, and updated tool documentation.
+
 ## [0.5.1] - 2026-09-28
 
 ### 🛠️ Glama TDQS Optimizations & MCP Annotations

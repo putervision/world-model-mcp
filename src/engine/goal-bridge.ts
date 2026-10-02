@@ -15,15 +15,21 @@ export class GoalBridge {
       region_id?: string;
       relationship: GoalRelationshipType;
       notes?: string;
+      target_entity_id?: string;
+      success_region?: { min: Vector3D; max: Vector3D };
+      min_clearance?: number;
     }
   ): GoalLink {
     const id = generateId();
     const now = getCurrentIsoString();
+    const targetEntityId = params.target_entity_id || params.entity_id;
 
     db.prepare(
       `
-      INSERT INTO goal_links (id, project, task_id, entity_id, region_id, relationship, notes, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO goal_links (
+        id, project, task_id, entity_id, region_id, relationship, notes,
+        target_entity_id, success_region_json, min_clearance, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `
     ).run(
       id,
@@ -33,6 +39,9 @@ export class GoalBridge {
       params.region_id ?? null,
       params.relationship,
       params.notes ?? null,
+      targetEntityId ?? null,
+      params.success_region ? JSON.stringify(params.success_region) : null,
+      params.min_clearance ?? null,
       now
     );
 
@@ -44,6 +53,9 @@ export class GoalBridge {
       region_id: params.region_id,
       relationship: params.relationship,
       notes: params.notes,
+      target_entity_id: targetEntityId,
+      success_region: params.success_region,
+      min_clearance: params.min_clearance,
       created_at: now,
     };
   }
@@ -92,6 +104,9 @@ export class GoalBridge {
       region_id: r.region_id ?? undefined,
       relationship: r.relationship,
       notes: r.notes ?? undefined,
+      target_entity_id: r.target_entity_id ?? undefined,
+      success_region: r.success_region_json ? JSON.parse(r.success_region_json) : undefined,
+      min_clearance: r.min_clearance ?? undefined,
       created_at: r.created_at,
     }));
   }

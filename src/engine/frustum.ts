@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
-import { Entity } from '../schema/types.js';
+import { Entity, ExpectedReentryEntity } from '../schema/types.js';
 import { EntityStore } from './entity-store.js';
+import { PermanenceEngine } from './permanence.js';
 import {
   Vector3D,
   Orientation3D,
@@ -25,6 +26,7 @@ export interface ExpectedViewResult {
     distance: number;
     occluded_by_id: string;
   }>;
+  expected_reentry_entities?: ExpectedReentryEntity[];
 }
 
 export class FrustumEngine {
@@ -128,10 +130,82 @@ export class FrustumEngine {
       }
     }
 
+    // Predictive permanence: compute entities outside frustum or occluded that will re-enter within 0.5-5.0s
+    const visibleIds = new Set(visible.filter((v) => !v.is_occluded).map((v) => v.entity.id));
+    const nonVisibleMovingEntities = allEntities.filter((e) => {
+      if (visibleIds.has(e.id)) return false;
+      if (!e.position || !e.velocity) return false;
+      return (
+        Math.abs(e.velocity.x) > 0.01 ||
+        Math.abs(e.velocity.y) > 0.01 ||
+        Math.abs(e.velocity.z) > 0.01
+      );
+    });
+
+    const expectedReentry: ExpectedReentryEntity[] = [];
+    const timeStepsSeconds = [0.5, 1.0, 2.0, 3.0, 5.0];
+    const staticObstacleEntities = occluderCandidates.map((c) => c.entity);
+
+    for (const movingEnt of nonVisibleMovingEntities) {
+      for (const tau of timeStepsSeconds) {
+        const targetIso = new Date(Date.now() + tau * 1000).toISOString();
+        const extrap = PermanenceEngine.extrapolateEntityPosition(
+          movingEnt,
+          targetIso,
+          staticObstacleEntities
+        );
+
+        const coneTest = pointInFrustumCone(
+          params.observer_position,
+          yaw,
+          extrap.extrapolated_position,
+          fov,
+          maxDist
+        );
+
+        if (coneTest.visible) {
+          let blocked = false;
+          if (enableOcclusion && coneTest.distance > 0.5) {
+            const rayDir = vec3Normalize(
+              vec3Sub(extrap.extrapolated_position, params.observer_position)
+            );
+            const maxRayDist = coneTest.distance * 0.95;
+
+            for (const occ of occluderCandidates) {
+              if (occ.entity.id === movingEnt.id) continue;
+              const occBox = aabbFromCenterSize(occ.entity.position!, occ.entity.bounding_box!);
+              const hitTest = rayAabbIntersect(
+                params.observer_position,
+                rayDir,
+                occBox,
+                maxRayDist
+              );
+              if (hitTest.hit && hitTest.t < maxRayDist) {
+                blocked = true;
+                break;
+              }
+            }
+          }
+
+          if (!blocked) {
+            expectedReentry.push({
+              id: movingEnt.id,
+              name: movingEnt.name,
+              predicted_position: extrap.extrapolated_position,
+              estimated_reentry_ms: tau * 1000,
+              distance: Math.round(coneTest.distance * 1000) / 1000,
+            });
+            break; // Record earliest re-entry step
+          }
+        }
+      }
+    }
+
     return {
       observer_position: params.observer_position,
       visible_entities: visible,
       occluded_entities: occluded,
+      expected_reentry_entities: expectedReentry,
     };
   }
 }
