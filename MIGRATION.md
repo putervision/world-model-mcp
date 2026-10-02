@@ -1,6 +1,6 @@
 # 🚀 Migration Guide: @putervision/world-model-mcp
 
-This guide explains how to migrate client integrations, custom agents, and tool callers to the unified **v0.5.1+ API** with native transport and consolidated spatial semantics.
+This guide explains how to migrate client integrations, custom agents, and tool callers to the unified **v0.6.0+ API** with dynamic velocity, affordance bitmasks, and structured spatial slices.
 
 ---
 
@@ -50,3 +50,8 @@ Tool documentation and schemas can now be inspected directly through MCP resourc
 ### 5. Waypoint Navigation & Passable Obstacle Affordances
 - In `simulate_movement(mode: "navigate")`, regional waypoint path computation is performed with obstacle avoidance.
 - Entities marked with `properties: { is_passable: true }` (e.g. open doors, portals, sensors) are not flagged as obstacle collisions.
+
+### 6. Dynamic Velocity, Affordance Bitmasks & Spatial Slices (v0.6.0)
+- Entities now accept dynamic velocity vectors: `{ vx, vy, vz }` for predictive trajectory extrapolations in `simulate_movement`.
+- Entities support compact bitmask affordances: `AffordanceBitmask.TRAVERSABLE (1)`, `OCCLUDER (2)`, `CONTAINER (4)`, `INTERACTABLE (8)`, `THREAT (16)` for high-throughput zero-overhead spatial classification.
+- `link_to_goal(action: "get_context")` returns structured spatial slices filtered by affordance bitmasks and observer range, designed for cross-server synergy with `state-memory-mcp` and `agent-reasoning-mcp`.

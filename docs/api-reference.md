@@ -1,4 +1,4 @@
-# API Reference — @putervision/world-model-mcp (v0.5.1 — 15 Tools)
+# API Reference — @putervision/world-model-mcp (v0.6.0 — 15 Tools)
 
 Complete reference for all 15 Model Context Protocol (MCP) tools provided by `@putervision/world-model-mcp`.
 
@@ -8,7 +8,7 @@ Complete reference for all 15 Model Context Protocol (MCP) tools provided by `@p
 
 | Tool Name | Type | Purpose |
 | :--- | :--- | :--- |
-| `update_entity` | Mutation | Create or update 3D entities with position, orientation, AABB bounding volume, confidence, tags, and custom properties |
+| `update_entity` | Mutation | Create or update 3D entities with position, velocity, orientation, AABB bounding volume, affordance bitmask, confidence, tags, and custom properties |
 | `query_entities` | Read-only | Search entities by keyword (FTS5), type, status, spatial radius, tags, or fetch specific entity location & trajectory history (`entity_id`, `include_history`) |
 | `set_relation` | Mutation | Record or remove spatial relationships (`on`, `inside`, `next_to`, `above`, `below`, `near`, `contains`, `occluded_by`, `holding`, `facing`) |
 | `get_spatial_map` | Read-only | Export complete environment map (JSON, GeoJSON, glTF 2.0, OBJ, joint) or get high-level environment summary (`format: "summary"`) |
