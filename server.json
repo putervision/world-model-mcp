@@ -3,7 +3,7 @@
   "name": "io.github.putervision/world-model-mcp",
   "version": "0.6.0",
   "title": "World Model MCP",
-  "description": "Persistent 3D/2D spatial world model for AI agents with dynamic velocity, affordance bitmasks, entity tracking, and simulation.",
+  "description": "Persistent 3D/2D spatial world model for AI agents with dynamic velocity and entity tracking.",
   "publisher": "PuterVision",
   "license": "MIT",
   "websiteUrl": "https://worldmodelmcp.com",
