@@ -1,6 +1,13 @@
 import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
-import { Entity, EntityRow, EntityType, EntityStatus, SpatialSlice, SpatialPredicatePack } from '../schema/types.js';
+import {
+  Entity,
+  EntityRow,
+  EntityType,
+  EntityStatus,
+  SpatialSlice,
+  SpatialPredicatePack,
+} from '../schema/types.js';
 import { parseEntityRow } from './row-mappers.js';
 import { generateId } from '../utils/id.js';
 import { getCurrentIsoString } from '../utils/time.js';
@@ -187,7 +194,9 @@ export class EntityStore {
     const updatedPos = params.position !== undefined ? params.position : current.position;
     const updatedVel = params.velocity !== undefined ? params.velocity : current.velocity;
     const updatedAffordance =
-      params.affordance_mask !== undefined ? params.affordance_mask : (current.affordance_mask ?? 0);
+      params.affordance_mask !== undefined
+        ? params.affordance_mask
+        : (current.affordance_mask ?? 0);
     const updatedOrient =
       params.orientation !== undefined ? params.orientation : current.orientation;
     const updatedBbox =
@@ -624,8 +633,10 @@ export class EntityStore {
       .update(canonicalJsonStringify(sortedSummary))
       .digest('hex');
 
-    const nearestObstacleDist = nearest_obstacle_distance !== undefined ? nearest_obstacle_distance : 999.0;
-    const collisionImminent = nearest_obstacle_distance !== undefined && nearest_obstacle_distance < 1.0;
+    const nearestObstacleDist =
+      nearest_obstacle_distance !== undefined ? nearest_obstacle_distance : 999.0;
+    const collisionImminent =
+      nearest_obstacle_distance !== undefined && nearest_obstacle_distance < 1.0;
 
     let occlusionFlag = false;
     if (visible_entities.length > 0 && nearest_obstacle_distance !== undefined) {

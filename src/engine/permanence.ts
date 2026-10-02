@@ -297,7 +297,12 @@ export class PermanenceEngine {
     );
 
     return allEntities.map((e) =>
-      PermanenceEngine.extrapolateEntityPosition(e, params.target_time_iso, obstacles, params.options)
+      PermanenceEngine.extrapolateEntityPosition(
+        e,
+        params.target_time_iso,
+        obstacles,
+        params.options
+      )
     );
   }
 }

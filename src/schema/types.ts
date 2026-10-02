@@ -37,10 +37,10 @@ export type EntityType =
 export enum AffordanceBitmask {
   NONE = 0,
   TRAVERSABLE = 1 << 0, // 1
-  OCCLUDER = 1 << 1,    // 2
-  CONTAINER = 1 << 2,   // 4
-  INTERACTABLE = 1 << 3,// 8
-  THREAT = 1 << 4,      // 16
+  OCCLUDER = 1 << 1, // 2
+  CONTAINER = 1 << 2, // 4
+  INTERACTABLE = 1 << 3, // 8
+  THREAT = 1 << 4, // 16
 }
 
 // Entity Status

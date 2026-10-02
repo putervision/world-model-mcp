@@ -135,7 +135,11 @@ export class FrustumEngine {
     const nonVisibleMovingEntities = allEntities.filter((e) => {
       if (visibleIds.has(e.id)) return false;
       if (!e.position || !e.velocity) return false;
-      return Math.abs(e.velocity.x) > 0.01 || Math.abs(e.velocity.y) > 0.01 || Math.abs(e.velocity.z) > 0.01;
+      return (
+        Math.abs(e.velocity.x) > 0.01 ||
+        Math.abs(e.velocity.y) > 0.01 ||
+        Math.abs(e.velocity.z) > 0.01
+      );
     });
 
     const expectedReentry: ExpectedReentryEntity[] = [];
@@ -170,7 +174,12 @@ export class FrustumEngine {
             for (const occ of occluderCandidates) {
               if (occ.entity.id === movingEnt.id) continue;
               const occBox = aabbFromCenterSize(occ.entity.position!, occ.entity.bounding_box!);
-              const hitTest = rayAabbIntersect(params.observer_position, rayDir, occBox, maxRayDist);
+              const hitTest = rayAabbIntersect(
+                params.observer_position,
+                rayDir,
+                occBox,
+                maxRayDist
+              );
               if (hitTest.hit && hitTest.t < maxRayDist) {
                 blocked = true;
                 break;

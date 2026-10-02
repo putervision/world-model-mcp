@@ -88,7 +88,8 @@ export const toolDefinitions: ToolDefinition[] = [
             y: { type: 'number', description: 'Velocity along Y axis' },
             z: { type: 'number', description: 'Velocity along Z axis' },
           },
-          description: '3D velocity vector (vx, vy, vz) for physical motion and predictive permanence',
+          description:
+            '3D velocity vector (vx, vy, vz) for physical motion and predictive permanence',
         },
         affordance_mask: {
           type: 'number',

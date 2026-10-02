@@ -41,12 +41,9 @@ describe('Velocity Extrapolation & Predictive Permanence', () => {
     };
 
     // dt = 1s, gamma = 0.1, displacement = v * dt * e^(-0.1 * 1) = 10 * 1 * 0.904837 = ~9.048
-    const result = PermanenceEngine.extrapolateEntityPosition(
-      entity,
-      now.toISOString(),
-      [],
-      { damping: 0.1 }
-    );
+    const result = PermanenceEngine.extrapolateEntityPosition(entity, now.toISOString(), [], {
+      damping: 0.1,
+    });
 
     expect(result.entity_id).toBe('ball_1');
     expect(result.elapsed_seconds).toBeCloseTo(1.0, 1);
@@ -128,12 +125,9 @@ describe('Velocity Extrapolation & Predictive Permanence', () => {
       version: 1,
     };
 
-    const result = PermanenceEngine.extrapolateEntityPosition(
-      entity,
-      now.toISOString(),
-      [],
-      { maxElapsedSeconds: 10.0 }
-    );
+    const result = PermanenceEngine.extrapolateEntityPosition(entity, now.toISOString(), [], {
+      maxElapsedSeconds: 10.0,
+    });
 
     expect(result.elapsed_seconds).toBeCloseTo(15.0, 1);
     expect(result.extrapolated_position.x).toBe(10);
@@ -169,7 +163,9 @@ describe('Velocity Extrapolation & Predictive Permanence', () => {
     });
 
     // Currently not visible in primary cone
-    const currentlyVisible = expectedView.visible_entities.some((v) => v.entity.id === ent.id && !v.is_occluded);
+    const currentlyVisible = expectedView.visible_entities.some(
+      (v) => v.entity.id === ent.id && !v.is_occluded
+    );
     expect(currentlyVisible).toBe(false);
 
     // Should predict re-entry in expected_reentry_entities
