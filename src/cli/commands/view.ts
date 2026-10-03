@@ -9,15 +9,33 @@ import { SpatialGraph } from '../../engine/spatial-graph.js';
 import { logger } from '../../utils/logger.js';
 
 
+export function escapeHtml(str: string): string {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function safeJsonStringify(val: any): string {
+  return JSON.stringify(val)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
 export function build3DViewerHtml(project: string, entities: any[], relations: any[]): string {
-  const dataJson = JSON.stringify({ project, entities, relations });
+  const dataJson = safeJsonStringify({ project, entities, relations });
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spatial World Model 3D Visualizer — ${project}</title>
+  <title>Spatial World Model 3D Visualizer — ${escapeHtml(project)}</title>
   <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
   <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -139,7 +157,7 @@ export function build3DViewerHtml(project: string, entities: any[], relations: a
 
   <div class="hud header">
     <h1>🌐 World Model 3D Visualizer</h1>
-    <span class="badge">Project: ${project}</span>
+    <span class="badge">Project: ${escapeHtml(project)}</span>
     <span class="badge" id="entity-count">${entities.length} Entities</span>
   </div>
 
@@ -257,7 +275,22 @@ export function build3DViewerHtml(project: string, entities: any[], relations: a
       items.forEach(ent => {
         const div = document.createElement('div');
         div.className = 'entity-card';
-        div.innerHTML = '<b>' + ent.name + '</b> <span class="badge" style="float:right;">' + ent.type + '</span><br><small style="color:var(--text-muted);">Pos: (' + (ent.position ? ent.position.x.toFixed(1) + ', ' + ent.position.y.toFixed(1) + ', ' + ent.position.z.toFixed(1) : 'none') + ')</small>';
+        const b = document.createElement('b');
+        b.textContent = ent.name || 'Unnamed';
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.style.cssText = 'float:right;';
+        badge.textContent = ent.type || 'unknown';
+        const br = document.createElement('br');
+        const small = document.createElement('small');
+        small.style.cssText = 'color:var(--text-muted);';
+        const posText = ent.position ? (ent.position.x.toFixed(1) + ', ' + ent.position.y.toFixed(1) + ', ' + ent.position.z.toFixed(1)) : 'none';
+        small.textContent = 'Pos: (' + posText + ')';
+        div.appendChild(b);
+        div.appendChild(document.createTextNode(' '));
+        div.appendChild(badge);
+        div.appendChild(br);
+        div.appendChild(small);
         div.onclick = () => {
           const m = meshMap.get(ent.id);
           if (m) {
@@ -321,6 +354,13 @@ export async function runView(args: string[] = []): Promise<void> {
   }
 
   const server = http.createServer((req, res) => {
+    const host = req.headers.host || '';
+    if (!host.startsWith('127.0.0.1') && !host.startsWith('localhost')) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden: Invalid Host header');
+      return;
+    }
+
     const urlPath = (req.url || '/').split('?')[0];
 
     if (urlPath === '/game' && gameHtml) {

@@ -280,7 +280,9 @@ updateFileContent('docs/game-demo.html', (content) => {
 
 // 13. MIGRATION.md
 updateFileContent('MIGRATION.md', (content) => {
-  return content.replace(/\*\*v[0-9]+\.[0-9]+\.[0-9]+\+ API\*\*/g, `**v${targetVersion}+ API**`);
+  return content
+    .replace(/\*\*v[0-9]+\.[0-9]+\.[0-9]+\+ API\*\*/g, `**v${targetVersion}+ API**`)
+    .replace(/\(v[0-9]+\.[0-9]+\.[0-9]+\)/g, `(v${targetVersion})`);
 });
 
 // 14. Scan all docs/**/*.md for version badges

@@ -268,6 +268,14 @@ export class GameControlsEngine {
     return commands;
   }
 
+  private static quoteJsString(str: string): string {
+    return `'${str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}'`;
+  }
+
+  private static sanitizeComment(desc?: string): string {
+    return desc ? desc.replace(/[\r\n]+/g, ' ') : '';
+  }
+
   /**
    * Generates a complete Playwright test/automation script.
    */
@@ -275,30 +283,31 @@ export class GameControlsEngine {
     const lines: string[] = [];
 
     for (const act of actions) {
+      const desc = this.sanitizeComment(act.description);
       if (act.type === 'key_hold' && act.key) {
-        lines.push(`  // ${act.description}`);
-        lines.push(`  await page.keyboard.down('${act.key}');`);
+        lines.push(`  // ${desc}`);
+        lines.push(`  await page.keyboard.down(${this.quoteJsString(act.key)});`);
         lines.push(`  await page.waitForTimeout(${act.duration_ms || 100});`);
-        lines.push(`  await page.keyboard.up('${act.key}');`);
+        lines.push(`  await page.keyboard.up(${this.quoteJsString(act.key)});`);
       } else if (act.type === 'key_press' && act.key) {
-        lines.push(`  // ${act.description}`);
-        lines.push(`  await page.keyboard.press('${act.key}');`);
+        lines.push(`  // ${desc}`);
+        lines.push(`  await page.keyboard.press(${this.quoteJsString(act.key)});`);
       } else if (act.type === 'mouse_move' && act.delta_x !== undefined) {
-        lines.push(`  // ${act.description}`);
+        lines.push(`  // ${desc}`);
         lines.push(`  await page.evaluate(({ dx, dy }) => {`);
         lines.push(
           `    document.dispatchEvent(new MouseEvent('mousemove', { movementX: dx, movementY: dy, bubbles: true }));`
         );
         lines.push(`  }, { dx: ${act.delta_x}, dy: ${act.delta_y || 0} });`);
       } else if (act.type === 'mouse_click') {
-        lines.push(`  // ${act.description}`);
+        lines.push(`  // ${desc}`);
         if (act.screen_x !== undefined && act.screen_y !== undefined) {
           lines.push(`  await page.mouse.click(${act.screen_x}, ${act.screen_y});`);
         } else {
           lines.push(`  await page.click('canvas');`);
         }
       } else if (act.type === 'wait' && act.duration_ms) {
-        lines.push(`  // ${act.description}`);
+        lines.push(`  // ${desc}`);
         lines.push(`  await page.waitForTimeout(${act.duration_ms});`);
       }
     }
@@ -320,22 +329,23 @@ ${lines.join('\n')}
       '# PuterVision Native Desktop Input Sequence (Linux xdotool)',
     ];
     for (const act of actions) {
+      const desc = this.sanitizeComment(act.description);
       if (act.type === 'key_hold' && act.key) {
         const keySym = this.mapToXdotoolKey(act.key);
         const sec = ((act.duration_ms || 100) / 1000).toFixed(3);
-        lines.push(`# ${act.description}`);
+        lines.push(`# ${desc}`);
         lines.push(`xdotool keydown ${keySym}`);
         lines.push(`sleep ${sec}`);
         lines.push(`xdotool keyup ${keySym}`);
       } else if (act.type === 'key_press' && act.key) {
         const keySym = this.mapToXdotoolKey(act.key);
-        lines.push(`# ${act.description}`);
+        lines.push(`# ${desc}`);
         lines.push(`xdotool key ${keySym}`);
       } else if (act.type === 'mouse_move' && act.delta_x !== undefined) {
-        lines.push(`# ${act.description}`);
+        lines.push(`# ${desc}`);
         lines.push(`xdotool mousemove_relative -- ${act.delta_x} ${act.delta_y || 0}`);
       } else if (act.type === 'mouse_click') {
-        lines.push(`# ${act.description}`);
+        lines.push(`# ${desc}`);
         if (act.screen_x !== undefined && act.screen_y !== undefined) {
           lines.push(`xdotool mousemove ${act.screen_x} ${act.screen_y} click 1`);
         } else {
@@ -358,14 +368,15 @@ ${lines.join('\n')}
       'Add-Type -AssemblyName System.Windows.Forms',
     ];
     for (const act of actions) {
+      const desc = this.sanitizeComment(act.description);
       if (act.type === 'key_hold' && act.key) {
-        const keyStr = this.mapToSendKeys(act.key);
-        lines.push(`# ${act.description}`);
+        const keyStr = this.mapToSendKeys(act.key).replace(/["`$]/g, '');
+        lines.push(`# ${desc}`);
         lines.push(`[System.Windows.Forms.SendKeys]::SendWait("${keyStr}")`);
         lines.push(`Start-Sleep -Milliseconds ${act.duration_ms || 100}`);
       } else if (act.type === 'key_press' && act.key) {
-        const keyStr = this.mapToSendKeys(act.key);
-        lines.push(`# ${act.description}`);
+        const keyStr = this.mapToSendKeys(act.key).replace(/["`$]/g, '');
+        lines.push(`# ${desc}`);
         lines.push(`[System.Windows.Forms.SendKeys]::SendWait("${keyStr}")`);
       } else if (act.type === 'wait' && act.duration_ms) {
         lines.push(`Start-Sleep -Milliseconds ${act.duration_ms}`);

@@ -1,7 +1,7 @@
 {
   "manifest_version": "0.2",
   "name": "@putervision/world-model-mcp",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Persistent 3D/2D spatial world model for AI agents with dynamic velocity, affordance bitmasks, entity tracking, and simulation.",
   "author": {
     "name": "PuterVision"
