@@ -2,6 +2,15 @@
 
 All notable changes to `@putervision/world-model-mcp` will be documented in this file.
 
+## [0.6.1] - 2026-10-03
+
+### 🔒 Security, View Sanitization & Automation Hardening
+- **Viewer Template Sanitization**: Hardened 3D visualizer HTML template with safe JSON encoding, entity escaping, and DOM textContent rendering.
+- **DNS Rebinding Protection**: Enforced local Host header verification on visualizer HTTP server.
+- **Automation Input Escaping**: Sanitized string literals and filtered control newlines in generated Playwright, xdotool, and PowerShell game control scripts.
+- **Prototype Pollution Defense**: Filtered reserved object keys in Record schema parsing.
+- **Release Metadata Sync**: Synchronized manifests, documentation, and migration references across 0.6.1 targets.
+
 ## [0.6.0] - 2026-10-02
 
 ### 🚀 Affordance Bitmasks, Velocity Tracking & Spatial Slices

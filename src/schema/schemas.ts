@@ -169,11 +169,14 @@ export class RecordSchema<T> extends Schema<Record<string, T>> {
     if (typeof val !== 'object' || Array.isArray(val)) {
       throw new ValidationError(`${p} must be an object`);
     }
-    const result: Record<string, T> = {};
+    const result: Record<string, T> = Object.create(null);
     for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        continue;
+      }
       result[k] = this.valSchema.parse(v, `${p}.${k}`);
     }
-    return result;
+    return Object.assign({}, result);
   }
 
   toJsonSchema() {
@@ -256,6 +259,8 @@ export const z = {
   any: () => new AnySchema(),
   unknown: () => new AnySchema(),
 };
+
+export const s = z;
 
 // Enums
 export const ENTITY_TYPES = [
